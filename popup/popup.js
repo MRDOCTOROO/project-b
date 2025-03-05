@@ -1,0 +1,250 @@
+document.addEventListener("DOMContentLoaded", () => {
+
+    marked.setOptions({
+        highlight: (code, lang) => {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
+        },
+        langPrefix: 'hljs language-',
+        breaks: true
+    });
+
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const chatHistory = document.getElementById("chat-history");
+
+    // 发送消息
+    async function sendMessage() {
+
+        try {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // 添加用户消息
+            addMessageToChat("You", message, "right");
+            userInput.value = "";
+
+            // 显示加载状态
+            const loadingDiv = documentv.createElement('div');
+            loadingDiv.className = 'chat-message left';
+            loadingDiv.innerHTML = '<div class="message-header">Assistant</div><div class="loading">思考中...</div>';
+            chatHistory.appendChild(loadingDiv);
+
+            // 发送用户消息到后端存储
+            const response = await fetch('http://192.168.5.218:5000/store_message', {  // 替换为你的后端 API 地址
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: "12345",  // 这里可以使用真实用户 ID（从 Session 或 JWT 获取）
+                message: message
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('存储消息失败');
+        }
+
+
+            // 获取集群监控数据（确保后端服务已启动，并调整 URL 为实际地址） 使用fetch获取数据 
+            let prompt = "";
+            prompt = await updateSystemLoad(message)
+            console.log("prompt===>", prompt);
+            // 调用chat服务
+            chat(prompt);
+        } catch (error) {
+            console.error('发送消息失败:', error);
+            addMessageToChat("System", `错误：${error.message}`, "left");
+        }
+    }
+
+    async function chat(params) {
+        try {
+            const response = await fetch("http://10.100.1.97:30642/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    // 根据实际需要添加认证头（当前示例无认证）
+                },
+                body: JSON.stringify({
+                    "model": "/share/fshare/common/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": params
+                        }
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 1024
+                })
+            });
+            // 解析 AI 回复消息
+            const data = await response.json();
+            let botReply = data.choices[0].message.content;
+            botReply = botReply.replace(/<\/?think>/g, ''); // 移除 <think> 标签
+
+            // 在界面中添加 AI 回复消息
+            addMessageToChat("Assistant", botReply, "left");
+        } catch (error) {//try end
+            console.error('发送消息失败:', error);
+            addMessageToChat("System", `错误：${error.message}`, "left");
+        }
+    }
+
+    async function updateSystemLoad(message) {
+        try {
+            const response = await fetch("http://10.100.1.98:5000/full_status");
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log("API response:", data);
+
+            let totalGpuUsage = 0;
+            let gpuCount = 0;
+            let totalCpuUsage = 0;
+            let machineCount = 0;
+            let gpuDetails = {};
+            let cpuDetails = {
+                totalCores: 0,
+                totalThreads: 0
+            };
+
+
+            Object.values(data).forEach(machine => {
+
+                machine.gpu.forEach(gpu => {
+                    totalGpuUsage += gpu.utilization_gpu || 0;
+                    gpuCount++;
+
+                    gpuDetails[`Machine_${machine.machine}_GPU${gpu.id}`] = {
+                        name: gpu.name,
+                        utilization: gpu.utilization_gpu + "%",
+                        temperature: gpu.temperature + "°C",
+                        memory: `${gpu.memory_free}GB / ${gpu.memory_total}GB`
+                    };
+                });
+
+
+                totalCpuUsage += machine.system.cpu_usage || 0;
+                cpuDetails.totalCores += machine.system.cpu_cores || 0;
+                cpuDetails.totalThreads += machine.system.cpu_threads || 0;
+                machineCount++;
+            });
+
+            // 计算平均 GPU 和 CPU 使用率
+            const averageGpuUsage = gpuCount > 0 ? (totalGpuUsage / gpuCount).toFixed(2) + "%" : "0%";
+            const averageCpuUsage = machineCount > 0 ? (totalCpuUsage / machineCount).toFixed(2) + "%" : "0%";
+
+            // 组装系统负载信息
+            const systemLoad = {
+                averageCpuUsage,
+                totalCpuCores: cpuDetails.totalCores,
+                totalCpuThreads: cpuDetails.totalThreads,
+                totalGpuUsage: averageGpuUsage,
+                gpus: gpuDetails
+            };
+
+            console.log("Updated System Load:", systemLoad);
+
+            // 生成 Prompt
+            const prompt = `
+    当前系统状态：
+    - CPU平均使用率 = ${systemLoad.averageCpuUsage}
+    - GPU平均使用率 = ${systemLoad.totalGpuUsage}
+    - 总 CPU 核心数 = ${systemLoad.totalCpuCores}
+    - 总 CPU 线程数 = ${systemLoad.totalCpuThreads}
+
+    请根据用户需求类型分步骤处理：
+    1. **需求识别**：判断用户意图属于以下哪一类：
+    - 资源扩容（如运行卡顿/启动新服务）
+    - 故障排查（如异常负载/性能下降）
+    - 成本优化（如降低资源消耗）
+    - 容量规划（如未来业务扩展）
+
+    2. **动态响应**：
+    - 若为**资源扩容**：推荐CPU/GPU/内存/存储的配置，并对比当前负载缺口。
+    - 若为**故障排查**：分析高负载组件的原因，给出诊断思路（如进程检查、内存泄漏排查命令）。
+    - 若为**成本优化**：提出降配建议（如弹性伸缩策略、闲置资源清理）。
+    - 若为**容量规划**：根据历史增长趋势预测未来资源需求。
+
+    3. **统一要求**：
+    - 以自然对话形式回复，先总结系统状态，再针对性响应。
+    - 技术术语需附带白话解释（例："GPU使用率高可能导致渲染阻塞，可理解为视频编码排队"）。
+    - 主动询问是否需要进一步帮助（如"是否需要具体监控命令？"）。
+
+    所有回答优先使用中文。
+
+    用户需求：${message}
+    `;
+
+            return prompt;
+
+        } catch (error) {
+            console.error("Failed to fetch system status:", error);
+            return null;
+        }
+    }
+
+    function addMessageToChat(sender, text, position) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `chat-message ${position}`;
+
+        if (sender === "Assistant") {
+            // 解析Markdown并净化HTML
+            const rawHtml = marked.parse(text);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
+                ALLOWED_ATTR: ['href', 'src', 'alt']
+            });
+
+            messageDiv.innerHTML = `
+    <div class="message-header">${sender}</div>
+    <div class="markdown-body">${cleanHtml}</div>
+   `;
+        } else {
+            // 用户消息保持纯文本
+            messageDiv.innerHTML = `
+ <div class="message-header">${sender}</div>
+ <div>${escapeHtml(text)}</div>
+`;
+        }
+
+        chatHistory.appendChild(messageDiv);
+
+        // 高亮代码块
+        messageDiv.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+        });
+
+        // 自动滚动
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+    // HTML转义函数
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    // 清除文本框内容
+    clearBtn.addEventListener("click", () => {
+        userInput.value = "";
+    });
+
+    // 绑定按钮点击事件
+    sendBtn.addEventListener("click", sendMessage);
+
+    // 绑定回车键发送消息
+    userInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+});
+

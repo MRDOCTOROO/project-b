@@ -1,0 +1,146 @@
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 12px;
+    min-width: 600px;
+    background-color: #f8f9fa;
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    background: white;
+    overflow: hidden;
+    
+}
+
+.chat-history {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background: #fafafa;
+}
+
+.chat-message {
+    max-width: 85%;
+    margin: 12px 0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    line-height: 1.6;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.chat-message.right {
+    background: #007bff;
+    color: white;
+    margin-left: auto;
+}
+
+.chat-message.left {
+    background: white;
+    border: 1px solid #e9ecef;
+    margin-right: auto;
+}
+
+.chat-input-container {
+    padding: 8px;
+    border-top: 1px solid #eee;
+    background: white;
+    box-sizing: border-box; /* 确保 padding 和 border 包含在元素的总宽高内 */
+    width: 100%; /* 确保容器宽度占满父容器 */
+    max-width: 100%; /* 防止容器宽度超出父容器 */
+    overflow: hidden; /* 防止内容溢出 */
+    position: relative; /* 确保子元素定位正常 */
+    overflow: auto;
+}
+
+/* 文本输入框 */
+textarea {
+    width: 90%;
+    min-height: 60px;
+    padding: 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    transition: all 0.2s ease;
+}
+
+textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    outline: none;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn.primary:hover {
+    background: #0069d9;
+}
+
+.btn.danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn.danger:hover {
+    background: #c82333;
+}
+
+/* Markdown 内容样式 */
+.markdown-body {
+    background: transparent !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+.markdown-body h1, .markdown-body h2 {
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+}
+
+.markdown-body pre {
+    background: #f6f8fa !important;
+    padding: 16px !important;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.markdown-body code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    padding: 0.2em 0.4em;
+    background: rgba(175, 184, 193, 0.2);
+    border-radius: 3px;
+}
+
+.markdown-body table {
+    border-collapse: collapse;
+    margin: 1em 0;
+}
+
+.markdown-body td, .markdown-body th {
+    border: 1px solid #dfe2e5;
+    padding: 6px 13px;
+}
