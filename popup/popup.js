@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+    //页面加载首先加载历史对话
+    loadChatHistory();
+
     marked.setOptions({
         highlight: (code, lang) => {
             const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -14,6 +17,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearBtn = document.getElementById("clearBtn");
     const chatHistory = document.getElementById("chat-history");
 
+    //加载对话历史
+    async function loadChatHistory() {
+        // const user_id = sessionStorage.getItem("user_id");
+        // if (!user_id) {
+        //     console.warn("用户未登录，无法加载聊天记录");
+        //     return;
+        // }
+        const user_id = "12345";
+        try {
+            const response = await fetch(`http://192.168.5.218:5000/get_messages?user_id=${user_id}`);
+            if (!response.ok) {
+                throw new Error("无法获取聊天记录");
+            }
+    
+            const data = await response.json();
+            const messages = data.messages;  // 假设后端返回 { "messages": [{ "sender": "You", "message": "...", "timestamp": 123456 }] }
+    
+            // **按时间顺序排序**（如果后端未排序）
+            messages.sort((a, b) => a.timestamp - b.timestamp);
+    
+            // **加载聊天记录到对话框**
+            messages.forEach(msg => {
+                const position = msg.sender === "You" ? "right" : "left";
+                addMessageToChat(msg.sender, msg.message, position);
+            });
+    
+            console.log("聊天记录加载完成");
+    
+        } catch (error) {
+            console.error("加载聊天记录失败:", error);
+        }
+    }
+    
+
     // 发送消息
     async function sendMessage() {
 
@@ -21,12 +58,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = userInput.value.trim();
             if (!message) return;
 
+            // 获取用户 ID（从 sessionStorage 获取）
+            //临时测试
+            const user_id = "12345";
+            // const user_id = sessionStorage.getItem("user_id");
+            if (!user_id) {
+                console.error("用户 ID 未找到，可能需要重新登录");
+                return;
+            }
+
             // 添加用户消息
             addMessageToChat("You", message, "right");
             userInput.value = "";
 
             // 显示加载状态
-            const loadingDiv = documentv.createElement('div');
+            // const loadingDiv = documentv.createElement('div');
+            const loadingDiv = document.createElement('div');
             loadingDiv.className = 'chat-message left';
             loadingDiv.innerHTML = '<div class="message-header">Assistant</div><div class="loading">思考中...</div>';
             chatHistory.appendChild(loadingDiv);
@@ -38,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                user_id: "12345",  // 这里可以使用真实用户 ID（从 Session 或 JWT 获取）
+                user_id: user_id,  //从 Session获取用户ID
                 message: message
             })
         });
@@ -188,29 +235,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function addMessageToChat(sender, text, position) {
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `chat-message ${position}`;
+            //添加用户消息到对话框
 
-        if (sender === "Assistant") {
-            // 解析Markdown并净化HTML
-            const rawHtml = marked.parse(text);
-            const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
-                ALLOWED_ATTR: ['href', 'src', 'alt']
-            });
+            function addMessageToChat(sender, text, position) {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = `chat-message ${position}`;
 
-            messageDiv.innerHTML = `
-    <div class="message-header">${sender}</div>
-    <div class="markdown-body">${cleanHtml}</div>
-   `;
-        } else {
-            // 用户消息保持纯文本
-            messageDiv.innerHTML = `
- <div class="message-header">${sender}</div>
- <div>${escapeHtml(text)}</div>
-`;
-        }
+                if (sender === "Assistant") {
+                    // 解析Markdown并净化HTML
+                    const rawHtml = marked.parse(text);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
+                        ALLOWED_ATTR: ['href', 'src', 'alt']
+                    });
+
+                    messageDiv.innerHTML = `
+            <div class="message-header">${sender}</div>
+            <div class="markdown-body">${cleanHtml}</div>
+        `;
+                } else {
+                    // 用户消息保持纯文本
+                    messageDiv.innerHTML = `
+        <div class="message-header">${sender}</div>
+        <div>${escapeHtml(text)}</div>
+        `;
+                }
 
         chatHistory.appendChild(messageDiv);
 
