@@ -1,5 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+
+    //退出登录
+        // 退出登录按钮事件
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            chrome.storage.local.remove('user_id', () => {
+                console.log("用户已退出登录");
+                window.location.href = "login/login.html"; // 退出后跳转到登录页面
+            });
+        });
     //页面加载首先加载历史对话
     loadChatHistory();
 
@@ -17,16 +26,98 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearBtn = document.getElementById("clearBtn");
     const chatHistory = document.getElementById("chat-history");
 
+    // 生成用户ID（如果不存在）
+            // function generateUserId() {
+            //     let user_id = sessionStorage.getItem('user_id');  // 先从 sessionStorage 获取 user_id
+            //     console.log("user_idlocal===>", user_id);
+                
+            //     if (!user_id) {
+            //         user_id = 'user_' + Math.random().toString(36).substr(2, 9);  // 如果没有，生成一个新的唯一ID
+            //         sessionStorage.setItem('user_id', user_id);  // 存储到 sessionStorage
+            //     }
+            //     return user_id;
+            // }
+//生成用户ID改进版本
+// 生成或获取用户ID
+// function getOrCreateUserId() {
+//     return new Promise((resolve) => {
+//       chrome.storage.local.get('user_id', (data) => {
+//         let user_id = data.user_id; // 从本地存储获取 user_id
+  
+//         if (!user_id) {
+//           user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成唯一 ID
+//           chrome.storage.local.set({ user_id }, () => {
+//             console.log("新用户 ID 生成并存储:", user_id);
+//             resolve(user_id); // 返回新生成的 ID
+//           });
+//         } else {
+//           console.log("已存在的用户 ID:", user_id);
+//           resolve(user_id); // 返回已有的 ID
+//         }
+//       });
+//     });
+//   }
+  // 生成或获取用户 ID
+function getOrCreateUserId() {
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.storage.local.get('user_id', (data) => {
+        if (chrome.runtime.lastError) {
+          console.error("获取用户 ID 失败:", chrome.runtime.lastError);
+          reject(chrome.runtime.lastError);
+          return;
+        }
+
+        let user_id = data.user_id; // 获取存储的 user_id
+
+        if (!user_id) {
+          user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成新的 ID
+          chrome.storage.local.set({ user_id }, () => {
+            if (chrome.runtime.lastError) {
+              console.error("存储用户 ID 失败:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+              return;
+            }
+            console.log("新用户 ID 生成并存储:", user_id);
+            resolve(user_id);
+          });
+        } else {
+          console.log("已存在的用户 ID:", user_id);
+          resolve(user_id);
+        }
+      });
+    } catch (error) {
+      console.error("getOrCreateUserId 发生异常:", error);
+      reject(error);
+    }
+  });
+}
+
+  // 调用示例（异步）
+  async function generateUserId() {
+    let user_id = await getOrCreateUserId();
+    console.log("最终用户 ID:", user_id);
+    return user_id;
+  }
+  
+//   generateUserId();
+//end 用户ID
+
+    
+
     //加载对话历史
     async function loadChatHistory() {
+
+        //从浏览器本地存储获取用户ID
         // const user_id = sessionStorage.getItem("user_id");
         // if (!user_id) {
         //     console.warn("用户未登录，无法加载聊天记录");
         //     return;
         // }
-        const user_id = "12345";
+        // const user_id = "gsj";
+        const user_id = await generateUserId();
         try {
-            const response = await fetch(`http://192.168.5.218:5000/get_messages?user_id=${user_id}`);
+            const response = await fetch(`http://127.0.0.1:5000/api/get_chat?user_id=${user_id}`);
             if (!response.ok) {
                 throw new Error("无法获取聊天记录");
             }
@@ -59,13 +150,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!message) return;
 
             // 获取用户 ID（从 sessionStorage 获取）
+
+
+            // 调用 generateUserId 函数获取 user_id
+            const user_id = await generateUserId();
+            console.log("user_id===>", user_id);
+
             //临时测试
-            const user_id = "12345";
-            // const user_id = sessionStorage.getItem("user_id");
-            if (!user_id) {
-                console.error("用户 ID 未找到，可能需要重新登录");
-                return;
-            }
+            // const user_id = "12345";
+            // // const user_id = sessionStorage.getItem("user_id");
+            // if (!user_id) {
+            //     console.error("用户 ID 未找到，可能需要重新登录");
+            //     return;
+            // }
 
             // 添加用户消息
             addMessageToChat("You", message, "right");
@@ -77,9 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
             loadingDiv.className = 'chat-message left';
             loadingDiv.innerHTML = '<div class="message-header">Assistant</div><div class="loading">思考中...</div>';
             chatHistory.appendChild(loadingDiv);
+            
 
             // 发送用户消息到后端存储
-            const response = await fetch('http://192.168.5.218:5000/store_message', {  // 替换为你的后端 API 地址
+            const response = await fetch('http://127.0.0.1:5000/api/save_chat', {  // 替换为你的后端 API 地址
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -87,6 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
             body: JSON.stringify({
                 user_id: user_id,  //从 Session获取用户ID
                 message: message
+                // ai_reply: null
+                // ai_reply: ai_reply
             })
         });
 
@@ -130,10 +230,37 @@ document.addEventListener("DOMContentLoaded", () => {
             // 解析 AI 回复消息
             const data = await response.json();
             let botReply = data.choices[0].message.content;
-            botReply = botReply.replace(/<\/?think>/g, ''); // 移除 <think> 标签
+
+            // botReply = botReply.replace(/<\/?think>/g, ''); // 移除 <think> 标签
 
             // 在界面中添加 AI 回复消息
             addMessageToChat("Assistant", botReply, "left");
+
+            //获取用户id并存储ai回复到数据库
+            // const user_id = sessionStorage.getItem("user_id");
+            // if (!user_id) {
+            //     throw new Error("用户未登录，无法存储消息");
+            // }
+            
+            //  // 发送ai消息到后端存储
+            //  let ai_reply = botReply;
+            //  const response2 = await fetch('http://127.0.0.1:5000/store_message', {  // 替换为你的后端 API 地址
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({
+            //         user_id: user_id,  //从 Session获取用户ID
+            //         // message: message,
+            //         message:null,
+            //         ai_reply: ai_reply
+            //     })
+            // });
+    
+            // if (!response2.ok) {
+            //     throw new Error('存储消息失败');
+            // }           
+
         } catch (error) {//try end
             console.error('发送消息失败:', error);
             addMessageToChat("System", `错误：${error.message}`, "left");

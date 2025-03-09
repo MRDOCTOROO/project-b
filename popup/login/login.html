@@ -3,48 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户登录</title>
+    <title>登录 / 注册</title>
+    <link rel="stylesheet" href="register.css">
 </head>
 <body>
-    <h2>登录</h2>
-    <form id="loginForm">
-        <label for="username">用户名:</label>
-        <input type="text" id="username" required><br><br>
-        <label for="password">密码:</label>
-        <input type="password" id="password" required><br><br>
-        <button type="submit">登录</button>
-    </form>
+    <div id="auth-container">
+        <!-- 登录部分 -->
+        <div id="login-form">
+            <h2>登录</h2>
+            <label for="username">用户名:</label>
+            <input type="text" id="username" placeholder="请输入用户名">
+            <label for="password">密码:</label>
+            <input type="password" id="password" placeholder="请输入密码">
+            <button id="loginBtn">登录</button>
+            <p>没有账号？<a href="register.html" id="switch-to-register">注册</a></p>
+        </div>
 
-    <script>
-        document.getElementById("loginForm").addEventListener("submit", async function(event) {
-            event.preventDefault(); // 防止默认提交
+        <!-- 注册部分 -->
+        <!-- <div id="register-form" style="display: none;">
+            <h2>注册</h2>
+            <label for="new-username">用户名:</label>
+            <input type="text" id="new-username" placeholder="请输入用户名">
+            <label for="new-password">密码:</label>
+            <input type="password" id="new-password" placeholder="请输入密码">
+            <button id="registerBtn">注册</button>
+            <p>已有账号？<a href="javascript:void(0);" id="switch-to-login">登录</a></p>
+        </div>
+    </div> -->
 
-            const username = document.getElementById("username").value;
-            const password = document.getElementById("password").value;
-
-            try {
-                const response = await fetch("http://192.168.5.218:5000/login", { 
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ username, password }),
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    sessionStorage.setItem("user_id", data.user_id);  // 存储用户 ID
-                    sessionStorage.setItem("token", data.token);  // 存储 JWT 令牌
-                    window.location.href = "chat.html"; // 跳转到聊天页面
-                } else {
-                    alert("登录失败：" + data.error);
-                }
-            } catch (error) {
-                console.error("登录错误:", error);
-                alert("服务器错误");
-            }
-        });
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>

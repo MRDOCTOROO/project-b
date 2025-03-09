@@ -4,9 +4,25 @@ chrome.runtime.onInstalled.addListener(() => {
     console.log("Extension Installed");
   
     // 在存储中设置默认用户ID
-    chrome.storage.sync.set({ userId: "defaultUser123" }, () => {
-      console.log("User ID set to defaultUser123");
-    });
+    // chrome.storage.sync.set({ userId: "defaultUser123" }, () => {
+    //   console.log("User ID set to defaultUser123");
+    // });
+
+      // 检查用户是否已登录
+      chrome.storage.local.get('user_id', (data) => {
+        if (!data.user_id) {
+          // 用户未登录，打开登录页面
+          chrome.action.setPopup({ popup: "popup/login/login.html" });
+        } else {
+          // 用户已登录，打开 popup 页面
+          chrome.action.setPopup({ popup: "popup/popup.html" });
+        }
+      });
+      
+
+
+
+  //end
   });
   
   // 监听来自弹出页面的消息请求
