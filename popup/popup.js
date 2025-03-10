@@ -26,37 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearBtn = document.getElementById("clearBtn");
     const chatHistory = document.getElementById("chat-history");
 
-    // 生成用户ID（如果不存在）
-            // function generateUserId() {
-            //     let user_id = sessionStorage.getItem('user_id');  // 先从 sessionStorage 获取 user_id
-            //     console.log("user_idlocal===>", user_id);
-                
-            //     if (!user_id) {
-            //         user_id = 'user_' + Math.random().toString(36).substr(2, 9);  // 如果没有，生成一个新的唯一ID
-            //         sessionStorage.setItem('user_id', user_id);  // 存储到 sessionStorage
-            //     }
-            //     return user_id;
-            // }
-//生成用户ID改进版本
-// 生成或获取用户ID
-// function getOrCreateUserId() {
-//     return new Promise((resolve) => {
-//       chrome.storage.local.get('user_id', (data) => {
-//         let user_id = data.user_id; // 从本地存储获取 user_id
-  
-//         if (!user_id) {
-//           user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成唯一 ID
-//           chrome.storage.local.set({ user_id }, () => {
-//             console.log("新用户 ID 生成并存储:", user_id);
-//             resolve(user_id); // 返回新生成的 ID
-//           });
-//         } else {
-//           console.log("已存在的用户 ID:", user_id);
-//           resolve(user_id); // 返回已有的 ID
-//         }
-//       });
-//     });
-//   }
+
   // 生成或获取用户 ID
 function getOrCreateUserId() {
   return new Promise((resolve, reject) => {
@@ -108,7 +78,6 @@ function getOrCreateUserId() {
     
 
     //加载对话历史
-    // async f
     async function loadChatHistory() {
         const user_id = await generateUserId();  // 确保获取正确的 user_id
     
@@ -120,11 +89,11 @@ function getOrCreateUserId() {
     
             const data = await response.json();
             
-            if (!data || !data.messages || !Array.isArray(data.messages)) {
+            if (!data || !data.chats || !Array.isArray(data.messages)) {
                 throw new Error("聊天记录格式错误，未找到 messages");
             }
     
-            const messages = data.messages;  // 确保 messages 是数组
+            const messages = data.chats;  // 确保 messages 是数组
     
             // 按时间顺序排序（如果后端未排序）
             messages.sort((a, b) => a.timestamp - b.timestamp);
@@ -187,6 +156,9 @@ function getOrCreateUserId() {
             body: JSON.stringify({
                 user_id: user_id,  //从 Session获取用户ID
                 message: message
+                // user_message: message,
+                // ai_response: null
+                // sender: "user"
                 // ai_reply: null
                 // ai_reply: ai_reply
             })
@@ -211,57 +183,87 @@ function getOrCreateUserId() {
 
     async function chat(params) {
         try {
-            const response = await fetch("http://10.100.1.97:30642/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    // 根据实际需要添加认证头（当前示例无认证）
-                },
-                body: JSON.stringify({
-                    "model": "/share/fshare/common/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": params
-                        }
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 1024
-                })
-            });
+            // const response = await fetch("http://10.100.1.97:30642/v1/chat/completions", {
+            //     method: "POST",
+            //     headers: {
+            //         "Content-Type": "application/json",
+            //         // 根据实际需要添加认证头（当前示例无认证）
+            //     },
+            //     body: JSON.stringify({
+            //         "model": "/share/fshare/common/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/",
+            //         "messages": [
+            //             {
+            //                 "role": "user",
+            //                 "content": params
+            //             }
+            //         ],
+            //         "temperature": 0.7,
+            //         "max_tokens": 1024
+            //     })
+            // });
+            //曙光转发
+            
+                const response = await fetch("https://106d9.pluscdn.eu.org/api/v1/workspace/sspu/chat", {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "message": params,
+                        "mode": "chat"
+                    })
+                });
+                
+            //曙光直接
+            // const response = await fetch("http://10.100.1.92:6080/aiforward882682715139211264/chat/completions", {
+            //     method: "POST",
+            //     headers: {
+            //         "Content-Type": "application/json",
+            //         "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
+            //     },
+            //     body: JSON.stringify({
+            //         "messages": [
+            //             { "role": "user", "content": params }
+            //         ]
+            //     })
+            // });
+            
+            // const data = await response.json();
+            //
+            
             // 解析 AI 回复消息
             const data = await response.json();
-            let botReply = data.choices[0].message.content;
+            console.log(data);
+            // let botReply = data.choices[0].message.content;
+            let botReply = data.textResponse;
 
             // botReply = botReply.replace(/<\/?think>/g, ''); // 移除 <think> 标签
 
             // 在界面中添加 AI 回复消息
             addMessageToChat("Assistant", botReply, "left");
 
-            //获取用户id并存储ai回复到数据库
-            // const user_id = sessionStorage.getItem("user_id");
-            // if (!user_id) {
-            //     throw new Error("用户未登录，无法存储消息");
-            // }
+            const user_id = await generateUserId();
             
-            //  // 发送ai消息到后端存储
-            //  let ai_reply = botReply;
-            //  const response2 = await fetch('http://127.0.0.1:5000/store_message', {  // 替换为你的后端 API 地址
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({
-            //         user_id: user_id,  //从 Session获取用户ID
-            //         // message: message,
-            //         message:null,
-            //         ai_reply: ai_reply
-            //     })
-            // });
+             // 发送ai消息到后端存储
+            //  let ai_response = botReply;
+             const response2 = await fetch('http://127.0.0.1:5000/api/save_chat', {  // 替换为你的后端 API 地址
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user_id,  //从 Session获取用户ID
+                    message: botReply
+                    
+                    // sender: "ai"
+                })
+            });
     
-            // if (!response2.ok) {
-            //     throw new Error('存储消息失败');
-            // }           
+            if (!response2.ok) {
+                throw new Error('存储消息失败');
+            }           
 
         } catch (error) {//try end
             console.error('发送消息失败:', error);
