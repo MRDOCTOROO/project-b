@@ -69,18 +69,20 @@ function getOrCreateUserId() {
         }
 
         let user_id = data.user_id; // 获取存储的 user_id
+        console.log("user_id在getorcreat中获取本地的===>", user_id);
 
         if (!user_id) {
-          user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成新的 ID
-          chrome.storage.local.set({ user_id }, () => {
-            if (chrome.runtime.lastError) {
-              console.error("存储用户 ID 失败:", chrome.runtime.lastError);
-              reject(chrome.runtime.lastError);
-              return;
-            }
-            console.log("新用户 ID 生成并存储:", user_id);
-            resolve(user_id);
-          });
+        //   user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成新的 ID
+        //   chrome.storage.local.set({ user_id }, () => {
+        //     if (chrome.runtime.lastError) {
+        //       console.error("存储用户 ID 失败:", chrome.runtime.lastError);
+        //       reject(chrome.runtime.lastError);
+        //       return;
+        //     }
+        //     console.log("新用户 ID 生成并存储:", user_id);
+        //     resolve(user_id);
+        //   });
+        user_id = '1'
         } else {
           console.log("已存在的用户 ID:", user_id);
           resolve(user_id);
@@ -106,29 +108,28 @@ function getOrCreateUserId() {
     
 
     //加载对话历史
+    // async f
     async function loadChatHistory() {
-
-        //从浏览器本地存储获取用户ID
-        // const user_id = sessionStorage.getItem("user_id");
-        // if (!user_id) {
-        //     console.warn("用户未登录，无法加载聊天记录");
-        //     return;
-        // }
-        // const user_id = "gsj";
-        const user_id = await generateUserId();
+        const user_id = await generateUserId();  // 确保获取正确的 user_id
+    
         try {
             const response = await fetch(`http://127.0.0.1:5000/api/get_chat?user_id=${user_id}`);
             if (!response.ok) {
-                throw new Error("无法获取聊天记录");
+                throw new Error("无法获取聊天记录，服务器返回错误");
             }
     
             const data = await response.json();
-            const messages = data.messages;  // 假设后端返回 { "messages": [{ "sender": "You", "message": "...", "timestamp": 123456 }] }
+            
+            if (!data || !data.messages || !Array.isArray(data.messages)) {
+                throw new Error("聊天记录格式错误，未找到 messages");
+            }
     
-            // **按时间顺序排序**（如果后端未排序）
+            const messages = data.messages;  // 确保 messages 是数组
+    
+            // 按时间顺序排序（如果后端未排序）
             messages.sort((a, b) => a.timestamp - b.timestamp);
     
-            // **加载聊天记录到对话框**
+            // 加载聊天记录
             messages.forEach(msg => {
                 const position = msg.sender === "You" ? "right" : "left";
                 addMessageToChat(msg.sender, msg.message, position);
@@ -140,6 +141,7 @@ function getOrCreateUserId() {
             console.error("加载聊天记录失败:", error);
         }
     }
+    
     
 
     // 发送消息

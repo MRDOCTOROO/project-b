@@ -47,8 +47,8 @@ function loginUser(username, password) {
     .then(data => {
         if (data.success) {
             // ✅ 使用 chrome.storage.local 存储用户 ID
-            chrome.storage.local.set({ user_id: data.userId }, () => {
-                console.log('登录成功！用户ID:', data.userId);
+            chrome.storage.local.set({ user_id: username }, () => {
+                console.log('登录成功！用户ID:', username);
                 // 跳转到插件主界面或欢迎页面
                 window.location.href = "../popup.html";
             });
