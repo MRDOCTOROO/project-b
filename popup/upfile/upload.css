@@ -1,0 +1,48 @@
+.upload-container {
+    text-align: center;
+    padding: 20px;
+}
+
+#drop-area {
+    width: 90%;
+    max-width: 400px;
+    height: 150px;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    background-color: #fafafa;
+    color: #666;
+    padding: 20px;
+    margin: 15px auto;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    font-size: 16px;
+    color: #333;
+}
+
+.upload-highlight {
+    color: #007bff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#drop-area:hover {
+    background-color: #f0f8ff;
+    border-color: #007bff;
+}
+
+#drop-area.highlight {
+    border-color: #007bff;
+    background-color: #e6f7ff;
+}

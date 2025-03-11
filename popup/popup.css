@@ -95,6 +95,14 @@ textarea:focus {
     background: #007bff;
     color: white;
 }
+.btn.exit {
+    background: #0bb933;
+    color: white;
+}
+.btn.file {
+    background: #cc046fa0;
+    color: white;
+}
 
 .btn.primary:hover {
     background: #0069d9;
@@ -143,4 +151,85 @@ textarea:focus {
 .markdown-body td, .markdown-body th {
     border: 1px solid #dfe2e5;
     padding: 6px 13px;
+}
+
+/* 拖放上传文件区域 */
+#drop-area {
+    width: 100%;
+    max-width: 400px;
+    height: 150px;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    text-align: center;
+    background-color: #fafafa;
+    color: #666;
+    padding: 20px;
+    margin: 15px auto;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+#drop-area .upload-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+#drop-area .upload-text {
+    font-size: 16px;
+    color: #333;
+}
+
+#drop-area .upload-highlight {
+    color: #007bff;
+    font-weight: bold;
+}
+
+#drop-area:hover {
+    background-color: #f0f8ff;
+    border-color: #007bff;
+}
+
+#drop-area.highlight {
+    border-color: #007bff;
+    background-color: #e6f7ff;
+}
+
+
+/* 新弹窗窗口 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 50%;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+iframe {
+    width: 100%;
+    height: 400px;
+    border: none;
 }

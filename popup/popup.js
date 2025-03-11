@@ -1,4 +1,24 @@
 document.addEventListener("DOMContentLoaded", () => {
+    //上传文件弹窗
+    const openUploadBtn = document.getElementById("openUpload");
+    const uploadModal = document.getElementById("uploadModal");
+    const closeModal = document.querySelector(".close");
+
+    // 点击按钮打开上传页面
+    openUploadBtn.addEventListener("click", () => {
+        uploadModal.style.display = "block";
+    });
+
+    // 点击关闭按钮或外部区域关闭弹窗
+    closeModal.addEventListener("click", () => {
+        uploadModal.style.display = "none";
+    });
+
+    window.addEventListener("click", (event) => {
+        if (event.target === uploadModal) {
+            uploadModal.style.display = "none";
+        }
+    });
 
 
     //退出登录
@@ -89,7 +109,7 @@ function getOrCreateUserId() {
     
             const data = await response.json();
             
-            if (!data || !data.chats || !Array.isArray(data.messages)) {
+            if (!data || !data.chats || !Array.isArray(data.chats)) {
                 throw new Error("聊天记录格式错误，未找到 messages");
             }
     

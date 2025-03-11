@@ -26,23 +26,31 @@
                 <button id="clearBtn" class="btn danger">清除对话</button>
                 <button id="sendBtn" class="btn primary">发送</button>
                 <button id="logoutBtn" class="btn exit">退出登录</button>
-                
-                <!-- <button id="upfile" class="btn flie">上传附件</button> -->
-                <button id="openUpload" class="btn file">上传附件</button>
+
+                <button id="upfile" class="btn flie">上传附件</button>
+                <button id="upfile2" class="btn flie">选择上传附件-tmp</button>
 
             </div>
         </div>
 
-        <!-- 上传文件的弹窗 -->
+        <!-- 添加拖放上传区域 -->
+        <!-- <div id="drop-area">
+            <div class="upload-icon">📁</div>
+            <p class="upload-text">拖拽文件到这里或 <span class="upload-highlight">点击上传</span></p>
+        </div> -->
+            <!-- 上传文件的弹窗 -->
     <div id="uploadModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <iframe src="./upfile/upload.html"></iframe>
+            <iframe src="upfile/upload.html"></iframe>
         </div>
-    </div>
-    <!-- 结束弹窗功能 -->
+
 
     </div>
-    <script  type="module" src="popup.js"></script>
+
+
+
+    </div>
+    <script type="module" src="popup.js"></script>
 </body>
 </html>
