@@ -1,25 +1,190 @@
 document.addEventListener("DOMContentLoaded", () => {
     //上传文件弹窗
-    const openUploadBtn = document.getElementById("openUpload");
-    const uploadModal = document.getElementById("uploadModal");
-    const closeModal = document.querySelector(".close");
+    // const openUploadBtn = document.getElementById("openUpload");
+    // const uploadModal = document.getElementById("uploadModal");
+    // const closeModal = document.querySelector(".close");
 
-    // 点击按钮打开上传页面
-    openUploadBtn.addEventListener("click", () => {
-        uploadModal.style.display = "block";
-    });
+    // // 点击按钮打开上传页面
+    // openUploadBtn.addEventListener("click", () => {
+    //     uploadModal.style.display = "block";
+    // });
 
-    // 点击关闭按钮或外部区域关闭弹窗
-    closeModal.addEventListener("click", () => {
-        uploadModal.style.display = "none";
-    });
+    // // 点击关闭按钮或外部区域关闭弹窗
+    // closeModal.addEventListener("click", () => {
+    //     uploadModal.style.display = "none";
+    // });
 
-    window.addEventListener("click", (event) => {
-        if (event.target === uploadModal) {
-            uploadModal.style.display = "none";
-        }
-    });
+    // window.addEventListener("click", (event) => {
+    //     if (event.target === uploadModal) {
+    //         uploadModal.style.display = "none";
+    //     }
+    // });
+    //完整的文件上传
+    // 上传文件弹窗
+// const openUploadBtn = document.getElementById("openUpload");
+// const uploadModal = document.getElementById("uploadModal");
+// const closeModal = document.querySelector(".close");
 
+// // 检查元素是否找到
+// if (!openUploadBtn || !uploadModal || !closeModal) {
+//     console.error("未能找到某些必需的元素！");
+//     return;
+// }
+
+
+// // 点击按钮打开上传页面
+// openUploadBtn.addEventListener("click", () => {
+//     uploadModal.style.display = "block";
+// });
+
+// // 点击关闭按钮或外部区域关闭弹窗
+// closeModal.addEventListener("click", () => {
+//     uploadModal.style.display = "none";
+// });
+
+// window.addEventListener("click", (event) => {
+//     if (event.target === uploadModal) {
+//         uploadModal.style.display = "none";
+//     }
+// });
+
+// // 文件上传功能实现
+// function setupFileUpload() {
+//     const uploadContainer = document.querySelector(".upload-container");
+    
+//     // 确保 .upload-container 存在
+//     if (!uploadContainer) {
+//         console.error("上传容器未找到！");
+//         return;
+//     }
+
+//     const fileInput = document.createElement("input");
+//     fileInput.type = "file";
+//     fileInput.accept = ".pdf";  // 只允许PDF文件
+//     fileInput.style.display = "none";
+
+//     // 将文件选择框添加到上传区域
+//     uploadContainer.appendChild(fileInput);
+
+//     const dropArea = document.getElementById("drop-area");
+
+//     // 点击按钮触发文件选择框
+//     const clickUpload = document.getElementById("clickUpload");
+//     clickUpload.addEventListener("click", () => {
+//         fileInput.click();
+//     });
+
+//     // 文件选择框变化时处理文件
+//     fileInput.addEventListener("change", (event) => {
+//         const files = event.target.files;
+//         handleFiles(files);
+//     });
+
+//     // 监听拖放事件
+//     dropArea.addEventListener("dragover", (event) => {
+//         event.preventDefault();
+//         dropArea.classList.add("highlight");
+//     });
+
+//     dropArea.addEventListener("dragleave", () => {
+//         dropArea.classList.remove("highlight");
+//     });
+
+//     dropArea.addEventListener("drop", (event) => {
+//         event.preventDefault();
+//         dropArea.classList.remove("highlight");
+//         const files = event.dataTransfer.files;
+//         handleFiles(files);
+//     });
+
+//     // 处理文件
+//     function handleFiles(files) {
+//         const file = files[0];
+
+//         if (!file) return;
+
+//         if (file.type !== "application/pdf") {
+//             alert("只能上传 PDF 文件！");
+//             return;
+//         }
+
+//         console.log("选中的文件：", file.name);
+//         uploadFile(file);
+//     }
+
+//     // 上传文件到服务器
+//     function uploadFile(file) {
+//         const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
+//         const formData = new FormData();
+//         formData.append("file", file);
+
+//         fetch(url, {
+//             method: "POST",
+//             headers: {
+//                 "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69"
+//             },
+//             body: formData
+//         })
+//         .then(response => response.json())
+//         .then(data => {
+//             console.log("上传成功:", data);
+//             alert("文件上传成功！");
+//         })
+//         .catch(error => {
+//             console.error("上传失败:", error);
+//             alert("文件上传失败，请重试！");
+//         });
+//     }
+// }
+// setupFileUpload();
+// 等待 DOM 加载完成后再执行
+// document.addEventListener("DOMContentLoaded", () => {
+//       // 确保 DOM 加载完成后再执行上传功能
+// });
+
+ // 获取上传按钮和文件输入框
+ const openUploadBtn = document.getElementById("openUpload");
+ const fileInput = document.getElementById("fileInput");
+
+ // 点击上传按钮，触发文件选择框
+ openUploadBtn.addEventListener("click", () => {
+     fileInput.click();
+ });
+
+ // 监听文件选择框变化事件，选择文件后触发上传
+ fileInput.addEventListener("change", (event) => {
+     const file = event.target.files[0];
+     if (file) {
+         uploadFile(file);
+     }
+ });
+
+ // 文件上传功能
+ function uploadFile(file) {
+     const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
+     const formData = new FormData();
+    //  formData.append("file", file);
+     formData.append("file", file, encodeURIComponent(file.name));
+
+     fetch(url, {
+         method: "POST",
+         headers: {
+             "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69"
+         },
+         body: formData
+     })
+
+     
+     .then(response => response.json())
+     .then(data => {
+         console.log("上传成功:", data);
+         alert("文件上传成功！");
+     })
+     .catch(error => {
+         console.error("上传失败:", error);
+         alert("文件上传失败，请重试！");
+     });
+ }
 
     //退出登录
         // 退出登录按钮事件
@@ -125,6 +290,10 @@ function getOrCreateUserId() {
             });
     
             console.log("聊天记录加载完成");
+                  // **确保历史对话中的代码高亮生效**
+        document.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+        });
     
         } catch (error) {
             console.error("加载聊天记录失败:", error);
@@ -392,25 +561,45 @@ function getOrCreateUserId() {
                 const messageDiv = document.createElement("div");
                 messageDiv.className = `chat-message ${position}`;
 
-                if (sender === "Assistant") {
-                    // 解析Markdown并净化HTML
-                    const rawHtml = marked.parse(text);
-                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                        ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
-                        ALLOWED_ATTR: ['href', 'src', 'alt']
-                    });
+                // 解析 Markdown 并净化 HTML
+    const rawHtml = marked.parse(text);
+    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+        ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
+        ALLOWED_ATTR: ['href', 'src', 'alt']
+    });
 
-                    messageDiv.innerHTML = `
-            <div class="message-header">${sender}</div>
-            <div class="markdown-body">${cleanHtml}</div>
-        `;
-                } else {
-                    // 用户消息保持纯文本
-                    messageDiv.innerHTML = `
+    messageDiv.innerHTML = `
         <div class="message-header">${sender}</div>
-        <div>${escapeHtml(text)}</div>
-        `;
-                }
+        <div class="markdown-body">${cleanHtml}</div>
+    `;
+
+    chatHistory.appendChild(messageDiv);
+
+    // 高亮代码块
+    messageDiv.querySelectorAll('pre code').forEach(block => {
+        hljs.highlightElement(block);
+    });
+
+
+        //         if (sender === "Assistant") {
+        //             // 解析Markdown并净化HTML
+        //             const rawHtml = marked.parse(text);
+        //             const cleanHtml = DOMPurify.sanitize(rawHtml, {
+        //                 ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
+        //                 ALLOWED_ATTR: ['href', 'src', 'alt']
+        //             });
+
+        //             messageDiv.innerHTML = `
+        //     <div class="message-header">${sender}</div>
+        //     <div class="markdown-body">${cleanHtml}</div>
+        // `;
+        //         } else {
+        //             // 用户消息保持纯文本
+        //             messageDiv.innerHTML = `
+        // <div class="message-header">${sender}</div>
+        // <div>${escapeHtml(text)}</div>
+        // `;
+        //         }
 
         chatHistory.appendChild(messageDiv);
 

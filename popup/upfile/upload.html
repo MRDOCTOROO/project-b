@@ -9,13 +9,17 @@
 <body>
     <div class="upload-container">
         <h2>上传文件</h2>
-        <div id="drop-area">
+        <div id="dropArea" >
             <div class="upload-icon">📁</div>
-            <p class="upload-text">拖拽文件到这里或 <span id="clickUpload" class="upload-highlight">点击上传</span></p>
+            <p class="upload-text">拖拽文件到这里或 <span id="uploadButton" class="upload-highlight">点击上传</span></p>
         </div>
         <input type="file" id="fileInput" hidden>
     </div>
-
-    <script type="module" src="upload.js"></script>
+    <!-- <script type="module" src="upload.js"></script> -->
+    <script type="module" src="../popup.js"></script>
+    <!-- <script type="module">
+        import { setupFileUpload } from "./upload.js";
+        setupFileUpload("uploadButton", "dropArea", ["image/png", "image/jpeg", "application/pdf"]);
+    </script> -->
 </body>
 </html>

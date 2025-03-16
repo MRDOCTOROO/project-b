@@ -25,7 +25,8 @@
     "host_permissions": [
       "https://openrouter.ai/*",
       "http://*/*",
-      "https://*/*"
+      "https://*/*",
+      "https://106d9.pluscdn.eu.org"
     ]
   }
   
