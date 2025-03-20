@@ -1,0 +1,56 @@
+<!-- 修改后的popup.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能资源助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <link rel="stylesheet" href="popup.css">
+    <!-- <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script> -->
+   
+    <script src="../lib/marked.min.js"></script>
+    <script src="../lib/highlight.min.js"></script>
+    <script src="../lib/purify.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-history" class="chat-history markdown-body"></div>
+        
+        <div class="chat-input-container">
+            <textarea id="userInput" placeholder="请输入您的任务描述...（支持换行，Shift+Enter换行）"></textarea>
+            <div class="button-group">
+                <button id="clearBtn" class="btn danger">清除对话</button>
+                <button id="sendBtn" class="btn primary">发送</button>
+                <button id="logoutBtn" class="btn exit">退出登录</button>
+                
+                <!-- <button id="upfile" class="btn flie">上传附件</button> -->
+                <button id="openUpload" class="btn file">上传附件</button>
+                <input type="file" id="fileInput" style="display: none;" accept=".pdf">
+            </div>
+        </div>
+
+        <!-- 上传文件的弹窗 -->
+    <!-- <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <iframe src="./upfile/upload.html" title="文件上传页面"></iframe>
+        </div>
+    </div> -->
+      <!-- 上传文件的弹窗 -->
+      <!-- <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <iframe src="./upfile/upload.html" title="文件上传页面"></iframe>
+        </div>
+    </div>
+</div> -->
+    <!-- 结束弹窗功能 -->
+
+    </div>
+    <script  type="module" src="popup.js"></script>
+</body>
+</html>

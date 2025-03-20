@@ -16,6 +16,7 @@ chrome.runtime.onInstalled.addListener(() => {
         } else {
           // 用户已登录，打开 popup 页面
           chrome.action.setPopup({ popup: "popup/popup.html" });
+          // chrome.action.setPopup({ popup: "popup/test/test.html" });
         }
       });
       
@@ -30,8 +31,10 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.get('user_id', (data) => {
   if (data.user_id) {
   chrome.action.setPopup({ popup: "popup/popup.html" });
+  // chrome.action.setPopup({ popup: "popup/test/test.html" });
   } else {
   chrome.action.setPopup({ popup: "popup/login/login.html" });
+  
   }
   });
   });

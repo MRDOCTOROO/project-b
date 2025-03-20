@@ -1,146 +1,153 @@
 document.addEventListener("DOMContentLoaded", () => {
-    //上传文件弹窗
-    // const openUploadBtn = document.getElementById("openUpload");
-    // const uploadModal = document.getElementById("uploadModal");
-    // const closeModal = document.querySelector(".close");
-
-    // // 点击按钮打开上传页面
-    // openUploadBtn.addEventListener("click", () => {
-    //     uploadModal.style.display = "block";
-    // });
-
-    // // 点击关闭按钮或外部区域关闭弹窗
-    // closeModal.addEventListener("click", () => {
-    //     uploadModal.style.display = "none";
-    // });
-
-    // window.addEventListener("click", (event) => {
-    //     if (event.target === uploadModal) {
-    //         uploadModal.style.display = "none";
-    //     }
-    // });
-    //完整的文件上传
-    // 上传文件弹窗
-// const openUploadBtn = document.getElementById("openUpload");
-// const uploadModal = document.getElementById("uploadModal");
-// const closeModal = document.querySelector(".close");
-
-// // 检查元素是否找到
-// if (!openUploadBtn || !uploadModal || !closeModal) {
-//     console.error("未能找到某些必需的元素！");
-//     return;
-// }
 
 
-// // 点击按钮打开上传页面
-// openUploadBtn.addEventListener("click", () => {
-//     uploadModal.style.display = "block";
-// });
+    //对话模式切换
+    // 全局变量，记录当前模式（默认为资源模式）
+let currentMode = 'resource';
 
-// // 点击关闭按钮或外部区域关闭弹窗
-// closeModal.addEventListener("click", () => {
-//     uploadModal.style.display = "none";
-// });
+// 获取 DOM 元素
+const modeToggleBtn = document.getElementById('modeToggle');
+const currentModeDisplay = document.getElementById('currentModeDisplay');
 
-// window.addEventListener("click", (event) => {
-//     if (event.target === uploadModal) {
-//         uploadModal.style.display = "none";
-//     }
-// });
+// 初始化按钮和提示文本
+function updateModeDisplay() {
+    if (currentMode === 'resource') {
+        modeToggleBtn.textContent = '切换模式: 查询解析文档内容';
+        currentModeDisplay.textContent = '当前模式: 资源使用建议模式';
+        currentModeDisplay.style.color = '#4CAF50'; // 绿色表示资源模式
+    } else {
+        modeToggleBtn.textContent = '切换模式: 资源使用建议模式';
+        currentModeDisplay.textContent = '当前模式: 查询解析文档内容';
+        currentModeDisplay.style.color = '#2196F3'; // 蓝色表示文档模式
+    }
+    console.log(currentMode)
+}
 
-// // 文件上传功能实现
-// function setupFileUpload() {
-//     const uploadContainer = document.querySelector(".upload-container");
-    
-//     // 确保 .upload-container 存在
-//     if (!uploadContainer) {
-//         console.error("上传容器未找到！");
-//         return;
-//     }
+// 初始显示
+updateModeDisplay();
 
-//     const fileInput = document.createElement("input");
-//     fileInput.type = "file";
-//     fileInput.accept = ".pdf";  // 只允许PDF文件
-//     fileInput.style.display = "none";
+// 按钮点击事件
+modeToggleBtn.addEventListener('click', () => {
+    currentMode = currentMode === 'resource' ? 'document' : 'resource';
+    updateModeDisplay();
+});
 
-//     // 将文件选择框添加到上传区域
-//     uploadContainer.appendChild(fileInput);
 
-//     const dropArea = document.getElementById("drop-area");
+    //历史对话实现
+    // 对话历史数据示例
+let sildchatHistory = [
+    { id: 1, title: '如何学习React', time: '2023-07-20 14:30', content: '...' },
+    { id: 2, title: '项目需求分析', time: '2023-07-20 15:45', content: '...' }
+];
 
-//     // 点击按钮触发文件选择框
-//     const clickUpload = document.getElementById("clickUpload");
-//     clickUpload.addEventListener("click", () => {
-//         fileInput.click();
-//     });
+// 渲染历史对话列表
+function renderChatList() {
+    const chatList = document.getElementById('chatList');
+    chatList.innerHTML = sildchatHistory.map(chat => `
+        <li class="chat-item" data-id="${chat.id}">
+            <div class="chat-content">
+                <div class="chat-title">${chat.title}</div>
+                <div class="chat-time">${chat.time}</div>
+            </div>
+            <div class="chat-actions">
+                <button class="btn-icon delete-btn" title="删除">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
+            </div>
+        </li>
+    `).join('');
+}
 
-//     // 文件选择框变化时处理文件
-//     fileInput.addEventListener("change", (event) => {
-//         const files = event.target.files;
-//         handleFiles(files);
-//     });
+// 初始化事件监听
+document.getElementById('chatList').addEventListener('click', (e) => {
+    const chatItem = e.target.closest('.chat-item');
+    if (chatItem) {
+        // 切换选中状态
+        document.querySelectorAll('.chat-item').forEach(item => 
+            item.classList.remove('active'));
+        chatItem.classList.add('active');
+        
+        // 加载对应对话内容
+        const chatId = chatItem.dataset.id;
+        loadChatHistory(chatId);
+    }
+});
 
-//     // 监听拖放事件
-//     dropArea.addEventListener("dragover", (event) => {
-//         event.preventDefault();
-//         dropArea.classList.add("highlight");
-//     });
 
-//     dropArea.addEventListener("dragleave", () => {
-//         dropArea.classList.remove("highlight");
-//     });
 
-//     dropArea.addEventListener("drop", (event) => {
-//         event.preventDefault();
-//         dropArea.classList.remove("highlight");
-//         const files = event.dataTransfer.files;
-//         handleFiles(files);
-//     });
+// 新建对话
+// document.getElementById('newChatBtn').addEventListener('click', async () => {
+//     const user_id = await generateUserId();
+//     const newChat = {
+//         id: Date.now(),
+//         title: `新对话 ${chatHistory.length + 1}`,
+//         time: new Date().toLocaleString(),
+//         content: ''
+//     };
 
-//     // 处理文件
-//     function handleFiles(files) {
-//         const file = files[0];
+//     // 向后端发送请求，创建新对话
+//     try {
+//         const response = await fetch('http://127.0.0.1:5000/api/create_chat', { //后端还未完成
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ user_id, chat_id: newChat.id, title: newChat.title }),
+//         });
 
-//         if (!file) return;
-
-//         if (file.type !== "application/pdf") {
-//             alert("只能上传 PDF 文件！");
-//             return;
+//         if (!response.ok) {
+//             throw new Error("无法创建新对话，服务器返回错误");
 //         }
 
-//         console.log("选中的文件：", file.name);
-//         uploadFile(file);
-//     }
+//         // 更新本地对话列表
+//         chatHistory.push(newChat);
+//         renderChatList();
+//         loadChatHistory(newChat.id); // 加载新对话
 
-//     // 上传文件到服务器
-//     function uploadFile(file) {
-//         const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
-//         const formData = new FormData();
-//         formData.append("file", file);
-
-//         fetch(url, {
-//             method: "POST",
-//             headers: {
-//                 "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69"
-//             },
-//             body: formData
-//         })
-//         .then(response => response.json())
-//         .then(data => {
-//             console.log("上传成功:", data);
-//             alert("文件上传成功！");
-//         })
-//         .catch(error => {
-//             console.error("上传失败:", error);
-//             alert("文件上传失败，请重试！");
-//         });
+//     } catch (error) {
+//         console.error("创建新对话失败:", error);
 //     }
-// }
-// setupFileUpload();
-// 等待 DOM 加载完成后再执行
-// document.addEventListener("DOMContentLoaded", () => {
-//       // 确保 DOM 加载完成后再执行上传功能
 // });
+
+//删除对话
+document.getElementById('chatList').addEventListener('click', async (e) => {//后端还未完成
+    if (e.target.closest('.delete-btn')) {
+        const chatItem = e.target.closest('.chat-item');
+        const chatId = Number(chatItem.dataset.id);
+
+        try {
+            const user_id = await generateUserId();
+            const response = await fetch(`http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error("无法删除对话，服务器返回错误");
+            }
+
+            // 更新本地对话列表
+            chatHistory = chatHistory.filter(chat => chat.id !== chatId);
+            renderChatList();
+
+        } catch (error) {
+            console.error("删除对话失败:", error);
+        }
+    }
+});
+
+
+// 搜索功能
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    const keyword = e.target.value.toLowerCase();
+    document.querySelectorAll('.chat-item').forEach(item => {
+        const title = item.querySelector('.chat-title').textContent.toLowerCase();
+        item.style.display = title.includes(keyword) ? 'flex' : 'none';
+    });
+});
+
+// 初始化渲染
+renderChatList();
+
 
  // 获取上传按钮和文件输入框
  const openUploadBtn = document.getElementById("openUpload");
@@ -196,6 +203,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     //页面加载首先加载历史对话
     loadChatHistory();
+    //切换条目传入不同chatid
+    // const chatItem = e.target.closest('.chat-item');
+    // if (chatItem) {
+    //     // 切换选中状态
+    //     document.querySelectorAll('.chat-item').forEach(item => 
+    //         item.classList.remove('active'));
+    //     chatItem.classList.add('active');
+
+    //     // 加载对应对话内容
+    //     const chatId = chatItem.dataset.id;
+    //     loadChatHistory(chatId);
+    // }
+    //end
+
 
     marked.setOptions({
         highlight: (code, lang) => {
@@ -263,7 +284,7 @@ function getOrCreateUserId() {
     
 
     //加载对话历史
-    async function loadChatHistory() {
+    async function loadChatHistory() { //chatId参数
         const user_id = await generateUserId();  // 确保获取正确的 user_id
     
         try {
@@ -277,8 +298,13 @@ function getOrCreateUserId() {
             if (!data || !data.chats || !Array.isArray(data.chats)) {
                 throw new Error("聊天记录格式错误，未找到 messages");
             }
-    
+            
+            
             const messages = data.chats;  // 确保 messages 是数组
+
+            // 清空当前聊天区域
+        const chatHistoryElement = document.getElementById('chat-history');
+        chatHistoryElement.innerHTML = '';
     
             // 按时间顺序排序（如果后端未排序）
             messages.sort((a, b) => a.timestamp - b.timestamp);
@@ -360,8 +386,18 @@ function getOrCreateUserId() {
 
             // 获取集群监控数据（确保后端服务已启动，并调整 URL 为实际地址） 使用fetch获取数据 
             let prompt = "";
-            prompt = await updateSystemLoad(message)
-            console.log("prompt===>", prompt);
+
+            if (currentMode === 'resource') {
+                prompt = await updateSystemLoad(message)
+            } else {
+                prompt =  message;
+                console.log("文档解析需求下的message===>", message);
+            }
+
+            console.log("当前模式===>", currentMode);
+            console.log("当前模式下的prompt===>", prompt);
+            // prompt = await updateSystemLoad(message)
+            // console.log("prompt===>", prompt);
             // 调用chat服务
             chat(prompt);
         } catch (error) {
@@ -370,6 +406,8 @@ function getOrCreateUserId() {
         }
     }
 
+
+    //回答系统资源使用状况模式的提示词
     async function chat(params) {
         try {
             // const response = await fetch("http://10.100.1.97:30642/v1/chat/completions", {
@@ -518,6 +556,8 @@ function getOrCreateUserId() {
 
             // 生成 Prompt
             const prompt = `
+
+            如果提问与系统使用以及资源分配建议无关时，请按照实际问题进行回复，忽略一以下提示。
     当前系统状态：
     - CPU平均使用率 = ${systemLoad.averageCpuUsage}
     - GPU平均使用率 = ${systemLoad.totalGpuUsage}
@@ -542,7 +582,7 @@ function getOrCreateUserId() {
     - 技术术语需附带白话解释（例："GPU使用率高可能导致渲染阻塞，可理解为视频编码排队"）。
     - 主动询问是否需要进一步帮助（如"是否需要具体监控命令？"）。
 
-    所有回答优先使用中文。
+    所有回答优先使用中文。 
 
     用户需求：${message}
     `;
@@ -562,8 +602,8 @@ function getOrCreateUserId() {
                 messageDiv.className = `chat-message ${position}`;
 
                 // 解析 Markdown 并净化 HTML
-    const rawHtml = marked.parse(text);
-    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+            const rawHtml = marked.parse(text);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
         ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img'],
         ALLOWED_ATTR: ['href', 'src', 'alt']
     });
@@ -573,7 +613,11 @@ function getOrCreateUserId() {
         <div class="markdown-body">${cleanHtml}</div>
     `;
 
-    chatHistory.appendChild(messageDiv);
+    // chatHistory.appendChild(messageDiv);
+    // chat-history.appendChild(messageDiv);
+    // 获取 chat-history DOM 元素并添加消息
+    const chatHistoryElement = document.getElementById('chat-history');
+    chatHistoryElement.appendChild(messageDiv);
 
     // 高亮代码块
     messageDiv.querySelectorAll('pre code').forEach(block => {
@@ -601,12 +645,12 @@ function getOrCreateUserId() {
         // `;
         //         }
 
-        chatHistory.appendChild(messageDiv);
+        // chatHistory.appendChild(messageDiv);
 
-        // 高亮代码块
-        messageDiv.querySelectorAll('pre code').forEach(block => {
-            hljs.highlightElement(block);
-        });
+        // // 高亮代码块
+        // messageDiv.querySelectorAll('pre code').forEach(block => {
+        //     hljs.highlightElement(block);
+        // });
 
         // 自动滚动
         chatHistory.scrollTop = chatHistory.scrollHeight;
