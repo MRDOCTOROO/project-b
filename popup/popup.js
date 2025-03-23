@@ -35,15 +35,67 @@ modeToggleBtn.addEventListener('click', () => {
 
     //历史对话实现
     // 对话历史数据示例
-let sildchatHistory = [
-    { id: 1, title: '如何学习React', time: '2023-07-20 14:30', content: '...' },
-    { id: 2, title: '项目需求分析', time: '2023-07-20 15:45', content: '...' }
-];
+// let sildchatHistory = [
+//     { id: 1, title: '如何学习React', time: '2023-07-20 14:30', content: '...' },
+//     { id: 2, title: '项目需求分析', time: '2023-07-20 15:45', content: '...' }
+// ];
+
+// 全局对话历史数组（修正变量名）
+// let  chatHistory = [
+//     // 示例数据（实际应从后端加载）
+//     {
+//         id: "a1b2c3d4-e5f6-7890-aaaa-bbbbaaeeee", // 后端生成的UUID
+//         title: "如何学习React",
+//         time: "2023-07-20 14:30",
+//         content: [] // 存储消息记录（由后端返回）
+//     },
+//     {
+//         id: "f1e2d3c4-b5a6-7890-cccc-dddd11223344",
+//         title: "项目需求分析",
+//         time: "2023-07-20 15:45",
+//         content: []
+//     }
+// ];
+// 原始 chatHistory 初始化为空数组
+let chatHistory = [];
+
+// 新增函数：根据用户ID加载所有对话
+async function loadUserChats() {
+    const user_id = await generateUserId(); // 假设 generateUserId() 从 Session 获取用户ID
+    try {
+        const response = await fetch(`/api/get_chats?user_id=${user_id}`);
+        const data = await response.json();
+        if (data.success) {
+            // 转换后端返回的对话列表格式
+            chatHistory = data.chats.map(chat => ({
+                id: chat.chat_id,
+                title: chat.title,
+                time: new Date(chat.created_at).toLocaleString(),
+                content: []
+            }));
+            renderChatList(); // 更新对话列表
+        }
+    } catch (error) {
+        console.error("加载对话列表失败:", error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // 检查用户是否已登录（假设通过 generateUserId() 判断）
+    try {
+        const user_id = await generateUserId();
+        if (user_id) {
+            await loadUserChats(); // 加载用户对话列表
+        }
+    } catch (error) {
+        console.error("获取用户ID失败:", error);
+    }
+});
 
 // 渲染历史对话列表
 function renderChatList() {
     const chatList = document.getElementById('chatList');
-    chatList.innerHTML = sildchatHistory.map(chat => `
+    chatList.innerHTML = chatHistory.map(chat => `
         <li class="chat-item" data-id="${chat.id}">
             <div class="chat-content">
                 <div class="chat-title">${chat.title}</div>
@@ -100,49 +152,225 @@ document.getElementById('chatList').addEventListener('click', (e) => {
 //         }
 
 //         // 更新本地对话列表
-//         chatHistory.push(newChat);
+//         // chatHistory.push(newChat);
+//         // renderChatList();
+//         // loadChatHistory(newChat.id); // 加载新对话
+//         const data = await response.json();
+//         if (!data.success || !data.chat_id) {
+//             throw new Error("无效的对话ID响应");
+//         }
+
+//         // 使用后端生成的 chat_id
+//         const chatId = data.chat_id;
+
+//         // 更新本地对话列表
+//         chatHistory.push({
+//             id: chatId,  // 使用后端返回的唯一ID
+//             title: newChat.title,
+//             time: newChat.time,
+//             content: newChat.content
+//         });
+
 //         renderChatList();
-//         loadChatHistory(newChat.id); // 加载新对话
+//         loadChatHistory(chatId); // 使用正确的 chatId 加载新对话
 
 //     } catch (error) {
 //         console.error("创建新对话失败:", error);
 //     }
 // });
 
+document.getElementById('newChatBtn').addEventListener('click', async () => {
+    const user_id = await generateUserId();
+    const newChatTitle = `newchat ${chatHistory.length + 1}`;
+    
+    // 发送到后端创建对话
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/create_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id, title: newChatTitle })
+        });
+
+        if (!response.ok) {
+            throw new Error("无法创建新对话，服务器返回错误");
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.chat_id) {
+            throw new Error("无效的对话ID响应");
+        }
+
+        // 更新本地对话列表
+        const newChat = {
+            id: data.chat_id,
+            title: newChatTitle,
+            time: new Date().toLocaleString(),
+            content: []
+        };
+        chatHistory.push(newChat);
+        renderChatList();
+        loadChatHistory(newChat.id); // 加载新对话内容
+
+    } catch (error) {
+        console.error("创建新对话失败:", error);
+    }
+});
 //删除对话
-document.getElementById('chatList').addEventListener('click', async (e) => {//后端还未完成
+// document.getElementById('chatList').addEventListener('click', async (e) => {//后端还未完成
+//     if (e.target.closest('.delete-btn')) {
+//         const chatItem = e.target.closest('.chat-item');
+//         const chatId = Number(chatItem.dataset.id);
+
+//         try {
+//             const user_id = await generateUserId();
+//             const response = await fetch(`http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`, {
+//                 method: 'DELETE',
+//             });
+
+//             if (!response.ok) {
+//                 throw new Error("无法删除对话，服务器返回错误");
+//             }
+
+//             // 更新本地对话列表
+//             chatHistory = chatHistory.filter(chat => chat.id !== chatId);
+//             renderChatList();
+
+//             // 如果删除的是当前激活对话，切换到第一个对话
+//             if (document.querySelector('.active')) {
+//                 document.querySelector('.active').classList.remove('active');
+//                 if (chatHistory.length > 0) {
+//                     const firstChat = chatHistory[0];
+//                     loadChatHistory(firstChat.id);
+//                     document.querySelector(`[data-id="${firstChat.id}"]`).classList.add('active');
+//                 }
+//             }
+
+//         } catch (error) {
+//             console.error("删除对话失败:", error);
+//         }
+//     }
+// });
+document.getElementById('chatList').addEventListener('click', async (e) => {
     if (e.target.closest('.delete-btn')) {
         const chatItem = e.target.closest('.chat-item');
-        const chatId = Number(chatItem.dataset.id);
+        const chatId = chatItem.dataset.id;
 
         try {
             const user_id = await generateUserId();
-            const response = await fetch(`http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`, {
-                method: 'DELETE',
-            });
+            const response = await fetch(
+                `http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`,
+                { method: 'DELETE' }
+            );
 
             if (!response.ok) {
                 throw new Error("无法删除对话，服务器返回错误");
             }
 
-            // 更新本地对话列表
+            // 更新本地列表和UI
             chatHistory = chatHistory.filter(chat => chat.id !== chatId);
             renderChatList();
 
+            // 如果删除的是当前激活对话，切换到其他对话
+            if (chatItem.classList.contains('active')) {
+                const firstChat = chatHistory[0];
+                if (firstChat) {
+                    loadChatHistory(firstChat.id);
+                    document.querySelector(`[data-id="${firstChat.id}"]`)
+                        .classList.add('active');
+                }
+            }
         } catch (error) {
             console.error("删除对话失败:", error);
         }
     }
 });
 
+// 初始化加载历史对话
+// async function initChatList() {
+//     const user_id = await generateUserId();
+//     try {
+//         const response = await fetch(`http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`);
+//         const data = await response.json();
+//         if (data.success) {
+//             chatHistory = data.chats.map(chat => ({
+//                 id: chat.id,
+//                 title: chat.title,
+//                 time: new Date(chat.created_at).toLocaleString(),
+//                 content: ''
+//             }));
+//             renderChatList();
+//             // 默认加载第一个对话
+//             if (chatHistory.length > 0) {
+//                 loadChatHistory(chatHistory[0].id);
+//                 document.querySelector(`[data-id="${chatHistory[0].id}"]`).classList.add('active');
+//             }
+//         }
+//     } catch (error) {
+//         console.error("加载对话历史失败:", error);
+//     }
+// }
 
-// 搜索功能
-document.getElementById('searchInput').addEventListener('input', (e) => {
-    const keyword = e.target.value.toLowerCase();
-    document.querySelectorAll('.chat-item').forEach(item => {
-        const title = item.querySelector('.chat-title').textContent.toLowerCase();
-        item.style.display = title.includes(keyword) ? 'flex' : 'none';
-    });
+// // 页面加载时初始化
+// document.addEventListener('DOMContentLoaded', async () => {
+//     await initChatList();
+// });
+
+// // 搜索功能
+// document.getElementById('searchInput').addEventListener('input', (e) => {
+//     const keyword = e.target.value.toLowerCase();
+//     document.querySelectorAll('.chat-item').forEach(item => {
+//         const title = item.querySelector('.chat-title').textContent.toLowerCase();
+//         item.style.display = title.includes(keyword) ? 'flex' : 'none';
+//     });
+// });
+async function initChatList() {
+    const user_id = await generateUserId();
+    try {
+        const response = await fetch(
+            `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
+            { method: 'GET' }
+        );
+        const data = await response.json();
+        if (data.success && data.chats) {
+            // 转换数据格式以匹配前端结构
+            chatHistory = data.chats.map(chat => ({
+                id: chat.chat_id,
+                title: chat.title,
+                time: new Date(chat.created_at).toLocaleString(),
+                content: []
+            }));
+            renderChatList();
+
+            // 默认加载第一个对话内容
+            if (chatHistory.length > 0) {
+                const firstChat = chatHistory[0];
+                loadChatHistory(firstChat.id);
+                document.querySelector(`[data-id="${firstChat.id}"]`)
+                    .classList.add('active');
+            }
+        }
+        //初始化时默认选中第一个对话
+    //     const firstChatItem = document.querySelector('#chatList .chat-item');
+    // if (firstChatItem) {
+    //     firstChatItem.classList.add('active');
+    // }
+
+    } catch (error) {
+        console.error("加载对话列表失败:", error);
+    }
+}
+
+
+//创建新对话默认选中
+// 创建新对话后自动选中
+// chatHistory.push(newChat);
+// renderChatList();
+// const newChatItem = document.querySelector(`[data-id="${newChat.id}"]`);
+// newChatItem.classList.add('active'); // 设置为当前选中项
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', async () => {
+    await initChatList();
 });
 
 // 初始化渲染
@@ -230,7 +458,7 @@ renderChatList();
     const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
     const clearBtn = document.getElementById("clearBtn");
-    const chatHistory = document.getElementById("chat-history");
+    // const chatHistory = document.getElementById("chat-history");
 
 
   // 生成或获取用户 ID
@@ -284,52 +512,80 @@ function getOrCreateUserId() {
     
 
     //加载对话历史
-    async function loadChatHistory() { //chatId参数
-        const user_id = await generateUserId();  // 确保获取正确的 user_id
+    // async function loadChatHistory() { //chatId参数
+    //     const user_id = await generateUserId();  // 确保获取正确的 user_id
     
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/api/get_chat?user_id=${user_id}`);
-            if (!response.ok) {
-                throw new Error("无法获取聊天记录，服务器返回错误");
-            }
+    //     try {
+    //         const response = await fetch(`http://127.0.0.1:5000/api/get_chat?user_id=${user_id}`);
+    //         if (!response.ok) {
+    //             throw new Error("无法获取聊天记录，服务器返回错误");
+    //         }
     
-            const data = await response.json();
+    //         const data = await response.json();
             
-            if (!data || !data.chats || !Array.isArray(data.chats)) {
-                throw new Error("聊天记录格式错误，未找到 messages");
-            }
+    //         if (!data || !data.chats || !Array.isArray(data.chats)) {
+    //             throw new Error("聊天记录格式错误，未找到 messages");
+    //         }
             
             
-            const messages = data.chats;  // 确保 messages 是数组
+    //         const messages = data.chats;  // 确保 messages 是数组
 
-            // 清空当前聊天区域
-        const chatHistoryElement = document.getElementById('chat-history');
-        chatHistoryElement.innerHTML = '';
+    //         // 清空当前聊天区域
+    //     const chatHistoryElement = document.getElementById('chat-history');
+    //     chatHistoryElement.innerHTML = '';
     
-            // 按时间顺序排序（如果后端未排序）
-            messages.sort((a, b) => a.timestamp - b.timestamp);
+    //         // 按时间顺序排序（如果后端未排序）
+    //         messages.sort((a, b) => a.timestamp - b.timestamp);
     
-            // 加载聊天记录
-            messages.forEach(msg => {
-                const position = msg.sender === "You" ? "right" : "left";
-                addMessageToChat(msg.sender, msg.message, position);
-            });
+    //         // 加载聊天记录
+    //         messages.forEach(msg => {
+    //             const position = msg.sender === "You" ? "right" : "left";
+    //             addMessageToChat(msg.sender, msg.message, position);
+    //         });
     
-            console.log("聊天记录加载完成");
-                  // **确保历史对话中的代码高亮生效**
-        document.querySelectorAll('pre code').forEach(block => {
-            hljs.highlightElement(block);
-        });
+    //         console.log("聊天记录加载完成");
+    //               // **确保历史对话中的代码高亮生效**
+    //     document.querySelectorAll('pre code').forEach(block => {
+    //         hljs.highlightElement(block);
+    //     });
     
+    //     } catch (error) {
+    //         console.error("加载聊天记录失败:", error);
+    //     }
+    // }
+    
+    async function loadChatHistory(chatId) {
+        const user_id = await generateUserId();
+        try {
+            const response = await fetch(
+                `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
+                { method: 'GET' }
+            );
+            const data = await response.json();
+            if (data.success && data.messages) {
+                // 更新对应对话的 content 字段
+                const targetChat = chatHistory.find(chat => chat.id === chatId);
+                if (targetChat) {
+                    targetChat.content = data.messages;
+                }
+    
+                // 渲染对话内容到页面
+                const chatContentContainer = document.getElementById('chatContent');
+                chatContentContainer.innerHTML = data.messages.map(msg => `
+                    <div class="message">${msg.message}</div>
+                `).join('');
+            }
         } catch (error) {
-            console.error("加载聊天记录失败:", error);
+            console.error("加载对话内容失败:", error);
         }
     }
-    
-    
 
     // 发送消息
     async function sendMessage() {
+        // const currentChatId = currentChatItem.dataset.id;
+        // console.log("当前chatid", currentChatId);
+        const user_id = await generateUserId();
+        console.log("user_id===>", user_id);
 
         try {
             const message = userInput.value.trim();
@@ -339,8 +595,7 @@ function getOrCreateUserId() {
 
 
             // 调用 generateUserId 函数获取 user_id
-            const user_id = await generateUserId();
-            console.log("user_id===>", user_id);
+
 
             //临时测试
             // const user_id = "12345";
@@ -359,10 +614,29 @@ function getOrCreateUserId() {
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'chat-message left';
             loadingDiv.innerHTML = '<div class="message-header">Assistant</div><div class="loading">思考中...</div>';
-            chatHistory.appendChild(loadingDiv);
-            
+            // chatHistory.appendChild(loadingDiv);
+            // const currentChatId = document.querySelector('.chat-item.active').dataset.id;
+            // const currentChatId = 1;
 
+
+            //获取当前对话ID
+            const currentChatItem = document.querySelector('.chat-item.active');
+            if (!currentChatItem) {
+                console.error("未选择对话，请先创建或选择一个对话");
+                return;
+            }
+            const currentChatId = currentChatItem.dataset.id;
+
+            // ✅ 正确操作：将 loadingDiv 添加到聊天内容容器（如 #chatContent）
+        const chatContentContainer = document.getElementById('chatContent');
+        chatContentContainer.appendChild(loadingDiv);
+
+            const chat_id = currentChatId;
             // 发送用户消息到后端存储
+            // console.log("当前chatid", chat_id);
+            // console.log("当前userid", user_id);
+            // console.log("当前message", message);
+            // console.log("当前会话id", currentChatId);
             const response = await fetch('http://127.0.0.1:5000/api/save_chat', {  // 替换为你的后端 API 地址
             method: 'POST',
             headers: {
@@ -370,7 +644,8 @@ function getOrCreateUserId() {
             },
             body: JSON.stringify({
                 user_id: user_id,  //从 Session获取用户ID
-                message: message
+                message: message,
+                chat_id: chat_id
                 // user_message: message,
                 // ai_response: null
                 // sender: "user"
@@ -379,8 +654,10 @@ function getOrCreateUserId() {
             })
         });
 
+        console.log("当前chatid", chat_id);
         if (!response.ok) {
-            throw new Error('存储消息失败');
+            const errorData = await response.json();
+            throw new Error(`存储消息失败: ${errorData.message}`);
         }
 
 
@@ -472,6 +749,14 @@ function getOrCreateUserId() {
             addMessageToChat("Assistant", botReply, "left");
 
             const user_id = await generateUserId();
+            const currentChatItem = document.querySelector('.chat-item.active');
+            if (!currentChatItem) {
+                console.error("未选择对话，请先创建或选择一个对话");
+                return;
+            }
+            const currentChatId = currentChatItem.dataset.id;
+            
+            const chat_id = currentChatId;
             
              // 发送ai消息到后端存储
             //  let ai_response = botReply;
@@ -482,7 +767,8 @@ function getOrCreateUserId() {
                 },
                 body: JSON.stringify({
                     user_id: user_id,  //从 Session获取用户ID
-                    message: botReply
+                    message: botReply,
+                    chat_id: chat_id
                     
                     // sender: "ai"
                 })
@@ -557,7 +843,7 @@ function getOrCreateUserId() {
             // 生成 Prompt
             const prompt = `
 
-            如果提问与系统使用以及资源分配建议无关时，请按照实际问题进行回复，忽略一以下提示。
+            
     当前系统状态：
     - CPU平均使用率 = ${systemLoad.averageCpuUsage}
     - GPU平均使用率 = ${systemLoad.totalGpuUsage}
@@ -616,7 +902,7 @@ function getOrCreateUserId() {
     // chatHistory.appendChild(messageDiv);
     // chat-history.appendChild(messageDiv);
     // 获取 chat-history DOM 元素并添加消息
-    const chatHistoryElement = document.getElementById('chat-history');
+    const chatHistoryElement = document.getElementById('chatContent');
     chatHistoryElement.appendChild(messageDiv);
 
     // 高亮代码块

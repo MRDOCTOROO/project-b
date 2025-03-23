@@ -46,7 +46,7 @@
          
         <!-- 右侧：对话区域 -->
         <main class="chat-container">
-            <div id="chat-history" class="chat-history markdown-body"></div>
+            <div id="chatContent" class="chat-history markdown-body"></div>
             
             <div class="chat-input-container">
                 <textarea id="userInput" placeholder="请输入您的任务描述...（Shift+Enter换行）"></textarea>
@@ -55,7 +55,7 @@
                     <button id="sendBtn" class="btn primary">发送</button>
                     <button id="logoutBtn" class="btn exit">退出登录</button>
                     <button id="openUpload" class="btn file">上传附件</button>
-                    <input type="file" id="fileInput" style="display: none;" accept=".pdf">
+                    <input type="file" id="fileInput" title="上传附件" style="display: none;"  accept=".doc, .docx, .pdf, .txt, .jpg, .jpeg, .png, .gif, .webp, .bmp">
                 </div>
             </div>
         </main>
