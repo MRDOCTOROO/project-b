@@ -1,6 +1,71 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 
+//图片解析
+// 获取上传图片按钮和文件选择框
+const imageUploadBtn = document.getElementById("imageUploadBtn");
+const imageFileInput = document.getElementById("imageFileInput");
+
+if (imageUploadBtn && imageFileInput) {
+    imageUploadBtn.addEventListener("click", () => {
+        imageFileInput.click();
+    });
+} else {
+    console.error("DOM 元素未找到！");
+}
+
+// // 点击上传按钮，触发文件选择框
+imageUploadBtn.addEventListener("click", () => {
+    imageFileInput.click();
+});
+
+// // 监听文件选择框变化事件，选择文件后触发上传
+imageFileInput.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        await parseImage(file); // 解析图片并返回文本
+    }
+});
+
+// // 图片解析功能
+async function parseImage(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        // 发送图片文件到OCR API
+        const response = await fetch('http://127.0.0.1:5001/ocr', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            const ocrText = result.text; // 获取OCR识别的文本
+            
+            // 处理解析文本，例如调用其他函数使用该文本
+            handleOcrResult(ocrText); 
+            
+            console.log('OCR识别结果:', ocrText);
+            document.getElementById('ocrResult').innerText = ocrText;  // 显示解析结果
+            
+        } else {
+            document.getElementById('ocrResult').innerText = `识别失败：${result.error}`;
+        }
+    } catch (error) {
+        document.getElementById('ocrResult').innerText = `网络错误：${error.message}`;
+    }
+}
+
+// 示例函数：处理OCR结果文本
+function handleOcrResult(text) {
+    // 这里可以将解析的文本传递给其他函数或进行进一步处理
+    console.log('文本传递给其他函数处理:', text);
+    // 可以在这里进行更复杂的操作，比如调用另一个API、更新界面等
+}
+
+
     //对话模式切换
     // 全局变量，记录当前模式（默认为资源模式）
 let currentMode = 'resource';
