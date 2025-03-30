@@ -15,9 +15,9 @@ if (imageUploadBtn && imageFileInput) {
 }
 
 // // 点击上传按钮，触发文件选择框
-imageUploadBtn.addEventListener("click", () => {
-    imageFileInput.click();
-});
+// imageUploadBtn.addEventListener("click", () => {
+//     imageFileInput.click();
+// });
 
 // // 监听文件选择框变化事件，选择文件后触发上传
 imageFileInput.addEventListener("change", async (event) => {
@@ -62,6 +62,9 @@ async function parseImage(file) {
 function handleOcrResult(text) {
     // 这里可以将解析的文本传递给其他函数或进行进一步处理
     console.log('文本传递给其他函数处理:', text);
+     // 将识别的文本填充到文本框中
+     const inputText = document.getElementById('userInput');
+     inputText.value = text; // 自动填充文本框
     // 可以在这里进行更复杂的操作，比如调用另一个API、更新界面等
 }
 
@@ -73,6 +76,9 @@ let currentMode = 'resource';
 // 获取 DOM 元素
 const modeToggleBtn = document.getElementById('modeToggle');
 const currentModeDisplay = document.getElementById('currentModeDisplay');
+
+//上传图片的prompt判断标签
+// const uploadButton = document.getElementById('imageFileInput');
 
 // 初始化按钮和提示文本
 function updateModeDisplay() {
@@ -98,38 +104,19 @@ modeToggleBtn.addEventListener('click', () => {
 });
 
 
-    //历史对话实现
-    // 对话历史数据示例
-// let sildchatHistory = [
-//     { id: 1, title: '如何学习React', time: '2023-07-20 14:30', content: '...' },
-//     { id: 2, title: '项目需求分析', time: '2023-07-20 15:45', content: '...' }
-// ];
-
-// 全局对话历史数组（修正变量名）
-// let  chatHistory = [
-//     // 示例数据（实际应从后端加载）
-//     {
-//         id: "a1b2c3d4-e5f6-7890-aaaa-bbbbaaeeee", // 后端生成的UUID
-//         title: "如何学习React",
-//         time: "2023-07-20 14:30",
-//         content: [] // 存储消息记录（由后端返回）
-//     },
-//     {
-//         id: "f1e2d3c4-b5a6-7890-cccc-dddd11223344",
-//         title: "项目需求分析",
-//         time: "2023-07-20 15:45",
-//         content: []
-//     }
-// ];
 // 原始 chatHistory 初始化为空数组
 let chatHistory = [];
 
-// 新增函数：根据用户ID加载所有对话
+// 新增函数：根据用户ID加载所有对话 loadUserChats是加载列表 loadChatHistory是加载对话内容
+//加载对话列表功能完成 代优化对话名称
 async function loadUserChats() {
     const user_id = await generateUserId(); // 假设 generateUserId() 从 Session 获取用户ID
+    console.log("获取对话列表是的 ID:", user_id); // 检查 user_id 是否正确
     try {
-        const response = await fetch(`/api/get_chats?user_id=${user_id}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`);
         const data = await response.json();
+        // console.log(data);
+        console.log("获取的对话列表", data);
         if (data.success) {
             // 转换后端返回的对话列表格式
             chatHistory = data.chats.map(chat => ({
@@ -140,22 +127,44 @@ async function loadUserChats() {
             }));
             renderChatList(); // 更新对话列表
         }
+        console.log("获取的对话列表格式化之后", chatHistory);
+        // console.log(chatHistory);
     } catch (error) {
         console.error("加载对话列表失败:", error);
     }
 }
+//打开插件 检测到登录则加载对话列表
+// document.addEventListener('DOMContentLoaded', async () => {
+//     // 检查用户是否已登录（假设通过 generateUserId() 判断）
+//     try {
+//         const user_id = await generateUserId();
+//         if (user_id) {
+//             await loadUserChats(); // 加载用户对话列表
+//         }
+//     } catch (error) {
+//         console.error("获取用户ID失败:", error);
+//     }
+// });
+loadUserChats();
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // 检查用户是否已登录（假设通过 generateUserId() 判断）
-    try {
-        const user_id = await generateUserId();
-        if (user_id) {
-            await loadUserChats(); // 加载用户对话列表
-        }
-    } catch (error) {
-        console.error("获取用户ID失败:", error);
-    }
-});
+// document.addEventListener('DOMContentLoaded', async () => {
+//     console.log("DOMContentLoaded 事件触发"); // 先检查事件是否触发
+
+//     try {
+//         const user_id = await generateUserId();
+//         console.log("获取到的用户 ID:", user_id); // 检查 user_id 是否正确
+
+//         if (user_id) {
+//             console.log("调用 loadUserChats()...");
+//             await loadUserChats();
+//         } else {
+//             console.warn("用户 ID 为空，未调用 loadUserChats()");
+//         }
+//     } catch (error) {
+//         console.error("获取用户 ID 失败:", error);
+//     }
+// });
+
 
 // 渲染历史对话列表
 function renderChatList() {
@@ -193,56 +202,6 @@ document.getElementById('chatList').addEventListener('click', (e) => {
 
 
 // 新建对话
-// document.getElementById('newChatBtn').addEventListener('click', async () => {
-//     const user_id = await generateUserId();
-//     const newChat = {
-//         id: Date.now(),
-//         title: `新对话 ${chatHistory.length + 1}`,
-//         time: new Date().toLocaleString(),
-//         content: ''
-//     };
-
-//     // 向后端发送请求，创建新对话
-//     try {
-//         const response = await fetch('http://127.0.0.1:5000/api/create_chat', { //后端还未完成
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//             },
-//             body: JSON.stringify({ user_id, chat_id: newChat.id, title: newChat.title }),
-//         });
-
-//         if (!response.ok) {
-//             throw new Error("无法创建新对话，服务器返回错误");
-//         }
-
-//         // 更新本地对话列表
-//         // chatHistory.push(newChat);
-//         // renderChatList();
-//         // loadChatHistory(newChat.id); // 加载新对话
-//         const data = await response.json();
-//         if (!data.success || !data.chat_id) {
-//             throw new Error("无效的对话ID响应");
-//         }
-
-//         // 使用后端生成的 chat_id
-//         const chatId = data.chat_id;
-
-//         // 更新本地对话列表
-//         chatHistory.push({
-//             id: chatId,  // 使用后端返回的唯一ID
-//             title: newChat.title,
-//             time: newChat.time,
-//             content: newChat.content
-//         });
-
-//         renderChatList();
-//         loadChatHistory(chatId); // 使用正确的 chatId 加载新对话
-
-//     } catch (error) {
-//         console.error("创建新对话失败:", error);
-//     }
-// });
 
 document.getElementById('newChatBtn').addEventListener('click', async () => {
     const user_id = await generateUserId();
@@ -281,40 +240,7 @@ document.getElementById('newChatBtn').addEventListener('click', async () => {
     }
 });
 //删除对话
-// document.getElementById('chatList').addEventListener('click', async (e) => {//后端还未完成
-//     if (e.target.closest('.delete-btn')) {
-//         const chatItem = e.target.closest('.chat-item');
-//         const chatId = Number(chatItem.dataset.id);
 
-//         try {
-//             const user_id = await generateUserId();
-//             const response = await fetch(`http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`, {
-//                 method: 'DELETE',
-//             });
-
-//             if (!response.ok) {
-//                 throw new Error("无法删除对话，服务器返回错误");
-//             }
-
-//             // 更新本地对话列表
-//             chatHistory = chatHistory.filter(chat => chat.id !== chatId);
-//             renderChatList();
-
-//             // 如果删除的是当前激活对话，切换到第一个对话
-//             if (document.querySelector('.active')) {
-//                 document.querySelector('.active').classList.remove('active');
-//                 if (chatHistory.length > 0) {
-//                     const firstChat = chatHistory[0];
-//                     loadChatHistory(firstChat.id);
-//                     document.querySelector(`[data-id="${firstChat.id}"]`).classList.add('active');
-//                 }
-//             }
-
-//         } catch (error) {
-//             console.error("删除对话失败:", error);
-//         }
-//     }
-// });
 document.getElementById('chatList').addEventListener('click', async (e) => {
     if (e.target.closest('.delete-btn')) {
         const chatItem = e.target.closest('.chat-item');
@@ -388,42 +314,46 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
 //         item.style.display = title.includes(keyword) ? 'flex' : 'none';
 //     });
 // });
-async function initChatList() {
-    const user_id = await generateUserId();
-    try {
-        const response = await fetch(
-            `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
-            { method: 'GET' }
-        );
-        const data = await response.json();
-        if (data.success && data.chats) {
-            // 转换数据格式以匹配前端结构
-            chatHistory = data.chats.map(chat => ({
-                id: chat.chat_id,
-                title: chat.title,
-                time: new Date(chat.created_at).toLocaleString(),
-                content: []
-            }));
-            renderChatList();
+// async function initChatList() {
+//     const user_id = await generateUserId();
+//     try {
+//         const response = await fetch(
+//             `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
+//             { method: 'GET' }
+//         );
+//         const data = await response.json();
+//         if (data.success && data.chats) {
+//             // 转换数据格式以匹配前端结构
+//             chatHistory = data.chats.map(chat => ({
+//                 id: chat.chat_id,
+//                 title: chat.title,
+//                 time: new Date(chat.created_at).toLocaleString(),
+//                 content: []
+//             }));
+//             //打印获取的对话列表
+//             console.log(chatHistory);
+//             renderChatList();
 
-            // 默认加载第一个对话内容
-            if (chatHistory.length > 0) {
-                const firstChat = chatHistory[0];
-                loadChatHistory(firstChat.id);
-                document.querySelector(`[data-id="${firstChat.id}"]`)
-                    .classList.add('active');
-            }
-        }
-        //初始化时默认选中第一个对话
-    //     const firstChatItem = document.querySelector('#chatList .chat-item');
-    // if (firstChatItem) {
-    //     firstChatItem.classList.add('active');
-    // }
+//             // 默认加载第一个对话内容
+//             if (chatHistory.length > 0) {
+//                 const firstChat = chatHistory[0];
+//                 loadChatHistory(firstChat.id);
+//                 document.querySelector(`[data-id="${firstChat.id}"]`)
+//                     .classList.add('active');
+//             }else {
+//                 console.error('获取对话列表失败:', data.message || '未知错误');
+//             }
+//         }
+//         //初始化时默认选中第一个对话
+//     //     const firstChatItem = document.querySelector('#chatList .chat-item');
+//     // if (firstChatItem) {
+//     //     firstChatItem.classList.add('active');
+//     // }
 
-    } catch (error) {
-        console.error("加载对话列表失败:", error);
-    }
-}
+//     } catch (error) {
+//         console.error("加载对话列表失败:", error);
+//     }
+// }
 
 
 //创建新对话默认选中
@@ -434,12 +364,12 @@ async function initChatList() {
 // newChatItem.classList.add('active'); // 设置为当前选中项
 
 // 页面加载时初始化
-document.addEventListener('DOMContentLoaded', async () => {
-    await initChatList();
-});
+// document.addEventListener('DOMContentLoaded', async () => {
+//     await initChatList();
+// });
 
 // 初始化渲染
-renderChatList();
+// renderChatList();
 
 
  // 获取上传按钮和文件输入框
@@ -494,8 +424,11 @@ renderChatList();
                 window.location.href = "login/login.html"; // 退出后跳转到登录页面
             });
         });
-    //页面加载首先加载历史对话
-    loadChatHistory();
+    //页面加载首先加载历史对话列表
+    // loadChatHistory();
+
+
+    //aaa 刚刚修改
     //切换条目传入不同chatid
     // const chatItem = e.target.closest('.chat-item');
     // if (chatItem) {
@@ -576,57 +509,18 @@ function getOrCreateUserId() {
 
     
 
-    //加载对话历史
-    // async function loadChatHistory() { //chatId参数
-    //     const user_id = await generateUserId();  // 确保获取正确的 user_id
-    
-    //     try {
-    //         const response = await fetch(`http://127.0.0.1:5000/api/get_chat?user_id=${user_id}`);
-    //         if (!response.ok) {
-    //             throw new Error("无法获取聊天记录，服务器返回错误");
-    //         }
-    
-    //         const data = await response.json();
-            
-    //         if (!data || !data.chats || !Array.isArray(data.chats)) {
-    //             throw new Error("聊天记录格式错误，未找到 messages");
-    //         }
-            
-            
-    //         const messages = data.chats;  // 确保 messages 是数组
-
-    //         // 清空当前聊天区域
-    //     const chatHistoryElement = document.getElementById('chat-history');
-    //     chatHistoryElement.innerHTML = '';
-    
-    //         // 按时间顺序排序（如果后端未排序）
-    //         messages.sort((a, b) => a.timestamp - b.timestamp);
-    
-    //         // 加载聊天记录
-    //         messages.forEach(msg => {
-    //             const position = msg.sender === "You" ? "right" : "left";
-    //             addMessageToChat(msg.sender, msg.message, position);
-    //         });
-    
-    //         console.log("聊天记录加载完成");
-    //               // **确保历史对话中的代码高亮生效**
-    //     document.querySelectorAll('pre code').forEach(block => {
-    //         hljs.highlightElement(block);
-    //     });
-    
-    //     } catch (error) {
-    //         console.error("加载聊天记录失败:", error);
-    //     }
-    // }
+    //加载单对话历史记录
     
     async function loadChatHistory(chatId) {
         const user_id = await generateUserId();
         try {
             const response = await fetch(
-                `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
+                // `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
+                `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
                 { method: 'GET' }
             );
             const data = await response.json();
+            console.log("获取的对话内容", data);
             if (data.success && data.messages) {
                 // 更新对应对话的 content 字段
                 const targetChat = chatHistory.find(chat => chat.id === chatId);
@@ -727,13 +621,31 @@ function getOrCreateUserId() {
 
 
             // 获取集群监控数据（确保后端服务已启动，并调整 URL 为实际地址） 使用fetch获取数据 
+
+
             let prompt = "";
 
             if (currentMode === 'resource') {
                 prompt = await updateSystemLoad(message)
-            } else {
-                prompt =  message;
-                console.log("文档解析需求下的message===>", message);
+            } else if(currentMode === 'document'){
+                // prompt =  message;
+                prompt = `
+                你是一个专业的AI助手，你的任务是根据用户的问题去本地的向量数据库寻找问题的答案，
+                如果没有对应的解答则返回“知识库中并没有问题的答案，但是根据训练时的数据，该问题可以”，然后根据你自己的了解去回答该问题。
+                用户的问题是： ${message}
+                 `;
+
+                // console.log("文档解析需求下的===>", message);
+            }else if(currentMode === 'image'){
+                // prompt =  message;
+                    // 获取OCR识别到的文本
+                const ocrText = document.getElementById('ocrResult').innerText; 
+                prompt = `
+                现在给你的字符是从图片中识别的文字，请根据识别到的文字信息回答问题。
+                图片信息是：${ocrText}
+                用户的问题是： ${message} `;
+            }else{
+             prompt=`你是一个协助科研的大模型`;
             }
 
             console.log("当前模式===>", currentMode);
@@ -915,25 +827,10 @@ function getOrCreateUserId() {
     - 总 CPU 核心数 = ${systemLoad.totalCpuCores}
     - 总 CPU 线程数 = ${systemLoad.totalCpuThreads}
 
-    请根据用户需求类型分步骤处理：
-    1. **需求识别**：判断用户意图属于以下哪一类：
-    - 资源扩容（如运行卡顿/启动新服务）
-    - 故障排查（如异常负载/性能下降）
-    - 成本优化（如降低资源消耗）
-    - 容量规划（如未来业务扩展）
+显卡是80G显存的A800，和使用MIG切分的40显存的A800
+ 以上是集群的cpu和GPU的部分信息。根据上边的系统资源使用状况，结合用户需求给出资源分配的合理建议，在回答的示例中首先输出当前系统状态。
+ 回答应该尽可能地简短专业，所有回答优先使用中文。
 
-    2. **动态响应**：
-    - 若为**资源扩容**：推荐CPU/GPU/内存/存储的配置，并对比当前负载缺口。
-    - 若为**故障排查**：分析高负载组件的原因，给出诊断思路（如进程检查、内存泄漏排查命令）。
-    - 若为**成本优化**：提出降配建议（如弹性伸缩策略、闲置资源清理）。
-    - 若为**容量规划**：根据历史增长趋势预测未来资源需求。
-
-    3. **统一要求**：
-    - 以自然对话形式回复，先总结系统状态，再针对性响应。
-    - 技术术语需附带白话解释（例："GPU使用率高可能导致渲染阻塞，可理解为视频编码排队"）。
-    - 主动询问是否需要进一步帮助（如"是否需要具体监控命令？"）。
-
-    所有回答优先使用中文。 
 
     用户需求：${message}
     `;

@@ -132,6 +132,13 @@ textarea {
     color: white;
 }
 
+/* 上传图片 */
+.btn.image {
+    background: #cdc41f;
+    color: white;
+}
+
+
 .btn.danger {
     background: #dc3545;
     color: white;
@@ -302,16 +309,16 @@ textarea {
 }
 
 /* 切换模式按钮样式 */
-.mode-switch {
+/* .mode-switch {
     margin: 20px;
     text-align: center;
 }
 
 #modeToggle {
-    padding: 10px 20px;
+    padding: 5px 10px;
     font-size: 16px;
     cursor: pointer;
-    background-color: #4CAF50;
+    background-color: #719472;
     color: white;
     border: none;
     border-radius: 4px;
@@ -323,4 +330,35 @@ textarea {
     background-color: #f1f1f1;
     border-radius: 4px;
     font-weight: bold;
+} */
+.mode-switch {
+    margin: 20px;
+    text-align: center;
+}
+
+#modeToggle {
+    padding: 10px 20px; /* 增大按钮的内边距 */
+    font-size: 18px; /* 增大字体 */
+    cursor: pointer;
+    background-color: #719472; /* 按钮背景色 */
+    color: white; /* 文字颜色 */
+    border: none; /* 移除边框 */
+    border-radius: 8px; /* 更大的圆角 */
+    transition: all 0.3s ease; /* 添加过渡效果 */
+}
+
+#modeToggle:hover {
+    background-color: #5a7e5b; /* 鼠标悬停时的背景色 */
+    transform: scale(1.05); /* 鼠标悬停时轻微放大 */
+}
+
+#currentModeDisplay {
+    margin-top: 10px; /* 增大外边距 */
+    padding: 10px 20px; /* 增大内边距 */
+    background-color: #e0f7e0; /* 更亮的背景色 */
+    border-radius: 8px; /* 圆角 */
+    font-size: 16px; /* 增大字体 */
+    font-weight: bold;
+    color: #333; /* 更深的文字颜色 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
