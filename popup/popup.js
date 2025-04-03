@@ -21,6 +21,9 @@ if (imageUploadBtn && imageFileInput) {
 
 // // 监听文件选择框变化事件，选择文件后触发上传
 imageFileInput.addEventListener("change", async (event) => {
+    currentMode = 'image';
+    updateModeDisplay();
+
     const file = event.target.files[0];
     if (file) {
         await parseImage(file); // 解析图片并返回文本
@@ -58,15 +61,20 @@ async function parseImage(file) {
     }
 }
 
+let ocrTextResult = ""; // 用于存储 OCR 解析的文本
 // 示例函数：处理OCR结果文本
 function handleOcrResult(text) {
     // 这里可以将解析的文本传递给其他函数或进行进一步处理
     console.log('文本传递给其他函数处理:', text);
+
+    ocrTextResult = text; // 存储 OCR 结果
+
      // 将识别的文本填充到文本框中
-     const inputText = document.getElementById('userInput');
-     inputText.value = text; // 自动填充文本框
+    //  const inputText = document.getElementById('userInput');
+    //  inputText.value = text; // 自动填充文本框
     // 可以在这里进行更复杂的操作，比如调用另一个API、更新界面等
 }
+
 
 
     //对话模式切换
@@ -79,27 +87,52 @@ const currentModeDisplay = document.getElementById('currentModeDisplay');
 
 //上传图片的prompt判断标签
 // const uploadButton = document.getElementById('imageFileInput');
+// const imageFileInput_model = document.getElementById('imageFileInput');
+// const imageUploadBtn_model = document.getElementById('imageUploadBtn');
 
 // 初始化按钮和提示文本
+// function updateModeDisplay() {
+//     if (currentMode === 'resource') {
+//         modeToggleBtn.textContent = '切换模式: 知识库助手'; //查询解析文档内容
+//         currentModeDisplay.textContent = '当前模式: 任务助手模式';
+//         currentModeDisplay.style.color = '#4CAF50'; // 绿色表示资源模式
+//     } else {
+//         modeToggleBtn.textContent = '切换模式:任务助手模式 ';//资源使用建议模式
+//         currentModeDisplay.textContent = '当前模式: 知识库助手';
+//         currentModeDisplay.style.color = '#2196F3'; // 蓝色表示文档模式
+//     }
+//     console.log(currentMode)
+// }
 function updateModeDisplay() {
     if (currentMode === 'resource') {
-        modeToggleBtn.textContent = '切换模式: 查询解析文档内容';
-        currentModeDisplay.textContent = '当前模式: 资源使用建议模式';
+        modeToggleBtn.textContent = '切换模式: 知识库助手'; // 查询解析文档内容
+        currentModeDisplay.textContent = '当前模式: 任务助手模式';
         currentModeDisplay.style.color = '#4CAF50'; // 绿色表示资源模式
-    } else {
-        modeToggleBtn.textContent = '切换模式: 资源使用建议模式';
-        currentModeDisplay.textContent = '当前模式: 查询解析文档内容';
+    } else if (currentMode === 'document') {
+        modeToggleBtn.textContent = '切换模式: 任务助手模式'; // 资源使用建议模式
+        currentModeDisplay.textContent = '当前模式: 知识库助手';
         currentModeDisplay.style.color = '#2196F3'; // 蓝色表示文档模式
+    } else if (currentMode === 'image') {
+        currentModeDisplay.textContent = '当前模式: 图片识别模式';
+        currentModeDisplay.style.color = '#FF9800'; // 橙色表示图片模式
     }
-    console.log(currentMode)
+    console.log("当前模式:", currentMode);
 }
 
 // 初始显示
 updateModeDisplay();
 
 // 按钮点击事件
+// modeToggleBtn.addEventListener('click', () => {
+//     currentMode = currentMode === 'resource' ? 'document' : 'resource';
+//     updateModeDisplay();
+// });
 modeToggleBtn.addEventListener('click', () => {
-    currentMode = currentMode === 'resource' ? 'document' : 'resource';
+    if (currentMode === 'resource') {
+        currentMode = 'document';
+    } else if (currentMode === 'document') {
+        currentMode = 'resource';
+    }
     updateModeDisplay();
 });
 
@@ -147,23 +180,6 @@ async function loadUserChats() {
 // });
 loadUserChats();
 
-// document.addEventListener('DOMContentLoaded', async () => {
-//     console.log("DOMContentLoaded 事件触发"); // 先检查事件是否触发
-
-//     try {
-//         const user_id = await generateUserId();
-//         console.log("获取到的用户 ID:", user_id); // 检查 user_id 是否正确
-
-//         if (user_id) {
-//             console.log("调用 loadUserChats()...");
-//             await loadUserChats();
-//         } else {
-//             console.warn("用户 ID 为空，未调用 loadUserChats()");
-//         }
-//     } catch (error) {
-//         console.error("获取用户 ID 失败:", error);
-//     }
-// });
 
 
 // 渲染历史对话列表
@@ -195,7 +211,13 @@ document.getElementById('chatList').addEventListener('click', (e) => {
         
         // 加载对应对话内容
         const chatId = chatItem.dataset.id;
-        loadChatHistory(chatId);
+        console.log(chatId);
+        // loadChatHistory(chatId);
+        if (chatId) {
+            loadChatHistory(chatId);
+        } else {
+            console.error("Chat ID not found!");
+        }
     }
 });
 
@@ -276,30 +298,8 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
     }
 });
 
-// 初始化加载历史对话
-// async function initChatList() {
-//     const user_id = await generateUserId();
-//     try {
-//         const response = await fetch(`http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`);
-//         const data = await response.json();
-//         if (data.success) {
-//             chatHistory = data.chats.map(chat => ({
-//                 id: chat.id,
-//                 title: chat.title,
-//                 time: new Date(chat.created_at).toLocaleString(),
-//                 content: ''
-//             }));
-//             renderChatList();
-//             // 默认加载第一个对话
-//             if (chatHistory.length > 0) {
-//                 loadChatHistory(chatHistory[0].id);
-//                 document.querySelector(`[data-id="${chatHistory[0].id}"]`).classList.add('active');
-//             }
-//         }
-//     } catch (error) {
-//         console.error("加载对话历史失败:", error);
-//     }
-// }
+
+
 
 // // 页面加载时初始化
 // document.addEventListener('DOMContentLoaded', async () => {
@@ -394,7 +394,14 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
      const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
      const formData = new FormData();
     //  formData.append("file", file);
+
+    const encodedFileName = encodeURIComponent(file.name); // 编码文件名
+
+    console.log("原始文件名:", file.name);
+    console.log("编码后的文件名:", encodedFileName);
+    
      formData.append("file", file, encodeURIComponent(file.name));
+     
 
      fetch(url, {
          method: "POST",
@@ -513,31 +520,55 @@ function getOrCreateUserId() {
     
     async function loadChatHistory(chatId) {
         const user_id = await generateUserId();
+        console.log("加载历史对话时获取的对话ID", chatId);
         try {
             const response = await fetch(
-                // `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
-                `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
+                `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
+                // `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
                 { method: 'GET' }
             );
             const data = await response.json();
             console.log("获取的对话内容", data);
-            if (data.success && data.messages) {
-                // 更新对应对话的 content 字段
-                const targetChat = chatHistory.find(chat => chat.id === chatId);
-                if (targetChat) {
-                    targetChat.content = data.messages;
-                }
+            // if (data.success && data.messages) {
+            //     // 更新对应对话的 content 字段
+            //     const targetChat = chatHistory.find(chat => chat.id === chatId);
+            //     if (targetChat) {
+            //         targetChat.content = data.messages;
+            //     }
     
-                // 渲染对话内容到页面
-                const chatContentContainer = document.getElementById('chatContent');
-                chatContentContainer.innerHTML = data.messages.map(msg => `
-                    <div class="message">${msg.message}</div>
-                `).join('');
+            //     // 渲染对话内容到页面
+            //     const chatContentContainer = document.getElementById('chatContent');
+            //     chatContentContainer.innerHTML = data.messages.map(msg => `
+            //         <div class="message">${msg.message}</div>
+            //     `).join('');
+
+            //     // loadChatHistoryToChatBox(messages);
+            // }
+            
+        if (data.success && data.messages) {
+            // 更新对应对话的 content 字段
+            const targetChat = chatHistory.find(chat => chat.id === chatId);
+            if (targetChat) {
+                targetChat.content = data.messages;
             }
+
+            // 清空当前对话框
+            const chatContentContainer = document.getElementById('chatContent');
+            chatContentContainer.innerHTML = '';
+
+            // 遍历消息并加载到对话框
+            data.messages.forEach((msg, index) => {
+                const sender = index % 2 === 0 ? "user" : "ai"; // 偶数索引为用户，奇数索引为AI
+                const position = sender === "user" ? "left" : "right"; // 设定对话框位置
+                addMessageToChat(sender, msg.content, position);
+            });
+        }
         } catch (error) {
             console.error("加载对话内容失败:", error);
         }
     }
+
+
 
     // 发送消息
     async function sendMessage() {
@@ -622,7 +653,7 @@ function getOrCreateUserId() {
 
             // 获取集群监控数据（确保后端服务已启动，并调整 URL 为实际地址） 使用fetch获取数据 
 
-
+        //四种prompt
             let prompt = "";
 
             if (currentMode === 'resource') {
@@ -639,11 +670,17 @@ function getOrCreateUserId() {
             }else if(currentMode === 'image'){
                 // prompt =  message;
                     // 获取OCR识别到的文本
-                const ocrText = document.getElementById('ocrResult').innerText; 
+                // const ocrText = document.getElementById('ocrResult').innerText; 
+                // console.log("ocrText===>", ocrText);
                 prompt = `
                 现在给你的字符是从图片中识别的文字，请根据识别到的文字信息回答问题。
-                图片信息是：${ocrText}
+                图片信息是：${ocrTextResult}
                 用户的问题是： ${message} `;
+
+                //图片识别模式完成
+
+                currentMode = 'resource';
+                updateModeDisplay();
             }else{
              prompt=`你是一个协助科研的大模型`;
             }
