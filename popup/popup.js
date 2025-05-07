@@ -1,6 +1,187 @@
+// 页面切换
+
+document.getElementById("recomond").addEventListener("click", () => {
+    window.location.href = "recomond.html";
+  });
+
+//提示建议
+
+const textarea = document.getElementById('userInput');
+const shadow = document.getElementById('shadowText');
+const suggestionList = document.getElementById('suggestionList');
+
+let debounceTimer = null;
+
+textarea.addEventListener('input', () => {
+  const val = textarea.value;
+
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    if (val.trim()) {
+      fetchSuggestions(val.trim());
+    } else {
+      shadow.textContent = '';
+      suggestionList.innerHTML = '';
+    }
+  }, 300); // 防抖，避免频繁请求
+});
+
+async function fetchSuggestions(inputValue) {
+  try {
+    const res = await fetch(`http://localhost:5000/api/suggestions?q=${encodeURIComponent(inputValue)}`);
+    const data = await res.json();
+    const matches = data.suggestions || [];
+    updateSuggestions(matches, inputValue);
+  } catch (err) {
+    console.error("获取建议失败：", err);
+  }
+}
+
+function updateSuggestions(matches, inputValue) {
+  suggestionList.innerHTML = '';
+
+  if (matches.length === 0) {
+    shadow.textContent = '';
+    return;
+  }
+
+  const first = matches[0];
+  if (first.toLowerCase().startsWith(inputValue.toLowerCase())) {
+    shadow.textContent = first;
+  } else {
+    shadow.textContent = '';
+  }
+
+  matches.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.textContent = s;
+    div.onclick = () => {
+      textarea.value = s;
+      shadow.textContent = s;
+      suggestionList.innerHTML = '';
+    };
+    suggestionList.appendChild(div);
+  });
+}
+
+// TAB 键补全
+textarea.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const suggestionItems = suggestionList.querySelectorAll('.suggestion-item');
+    if (suggestionItems.length > 0) {
+      const first = suggestionItems[0].textContent;
+      textarea.value = first;
+      shadow.textContent = first;
+      suggestionList.innerHTML = '';
+    }
+  }
+});
+
+// blur 后隐藏建议
+textarea.addEventListener('blur', () => {
+  setTimeout(() => suggestionList.innerHTML = '', 200);
+});
+
+
+
+
+// 页面加载时就要执行的功能
+
 document.addEventListener("DOMContentLoaded", () => {
 
+//推荐用户信息
 
+// 获取当前登录用户的用户名（这里假设通过某种方式获取，例如从浏览器扩展的存储中读取）
+
+//修改数据库--新增字段 包含中文用户名称-曙光平台用户名 在getCurrentUser()函数中获取
+async function getCurrentUser() {
+    // 模拟当前登录用户
+    // return "李可丰"; // 后续可以替换为动态获取的用户名
+    const user_id =  await generateUserId();
+    console.log("查询用户推荐的关键字：", user_id);
+    return user_id;
+}
+
+// 调用 Flask API 接口获取关联用户信息
+async function fetchRelatedUsers(username) {
+    const apiUrl = `https://xgtj.bbzb.ddns-ip.net/api/users/${encodeURIComponent(username)}`;
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Error fetching related users:", error);
+        return null;
+    }
+}
+
+// 动态更新页面内容
+// function updateChatContent(users) {
+//     const chatContent = document.getElementById("chatContent");
+//     const welcomeMessage = document.getElementById("welcomeMessage");
+
+//     // 清空欢迎消息
+//     if (welcomeMessage) {
+//         chatContent.removeChild(welcomeMessage);
+//     }
+
+//     if (!users || users.length === 0) {
+//         chatContent.innerHTML = "<p>未找到与您关联的用户信息。</p>";
+//         return;
+//     }
+
+//     // 添加关联用户信息
+//     users.forEach(user => {
+//         const userInfoDiv = document.createElement("div");
+//         userInfoDiv.className = "user-info";
+//         userInfoDiv.innerHTML = `
+//             <strong>研究推荐用户:</strong> ${user.user.name} (${user.user.email})<br>
+//             <strong>相关研究主题:</strong> ${user.topic_name} (ID: ${user.topic_id})
+//         `;
+//         chatContent.appendChild(userInfoDiv);
+//     });
+// }
+function updateChatContent(users) {
+    const chatContent = document.getElementById("chatContent");
+    const welcomeMessage = document.getElementById("welcomeMessage");
+
+    // 清除欢迎消息
+    if (welcomeMessage) {
+        chatContent.removeChild(welcomeMessage);
+    }
+
+    // 无结果提示
+    if (!users || users.length === 0) {
+        chatContent.innerHTML = "<p>未找到与您关联的用户信息。</p>";
+        return;
+    }
+
+    // 显示用户推荐信息
+    users.forEach(user => {
+        const userInfoDiv = document.createElement("div");
+        userInfoDiv.className = "user-info";
+        userInfoDiv.innerHTML = `
+            <strong>推荐用户:</strong> ${user.name} (${user.email})<br>
+            <strong>学院:</strong> ${user.college}<br>
+            <strong>相关研究主题:</strong> ${user.topic_name}
+        `;
+        chatContent.appendChild(userInfoDiv);
+    });
+}
+
+
+// 初始化页面
+async function initrel() {
+    const currentUser = await getCurrentUser(); // 获取当前登录用户
+    const relatedUsers = await fetchRelatedUsers(currentUser); // 查询关联用户
+    updateChatContent(relatedUsers); // 更新页面内容
+}
+initrel(); // 初始化页面
 //图片解析
 // 获取上传图片按钮和文件选择框
 const imageUploadBtn = document.getElementById("imageUploadBtn");
@@ -37,7 +218,7 @@ async function parseImage(file) {
 
     try {
         // 发送图片文件到OCR API
-        const response = await fetch('http://127.0.0.1:5001/ocr', {
+        const response = await fetch('http://127.0.0.1:5000/ocr', {
             method: 'POST',
             body: formData
         });
@@ -228,7 +409,7 @@ document.getElementById('chatList').addEventListener('click', (e) => {
 document.getElementById('newChatBtn').addEventListener('click', async () => {
     const user_id = await generateUserId();
     const newChatTitle = `newchat ${chatHistory.length + 1}`;
-    
+    console.log(user_id);
     // 发送到后端创建对话
     try {
         const response = await fetch('http://127.0.0.1:5000/api/create_chat', {
@@ -390,38 +571,95 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
  });
 
  // 文件上传功能
- function uploadFile(file) {
-     const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
-     const formData = new FormData();
-    //  formData.append("file", file);
+//  function uploadFile(file) {
+//      const url = "https://106d9.pluscdn.eu.org/api/v1/document/upload";
+//      const formData = new FormData();
+//     //  formData.append("file", file);
 
-    const encodedFileName = encodeURIComponent(file.name); // 编码文件名
+//     const encodedFileName = encodeURIComponent(file.name); // 编码文件名
 
-    console.log("原始文件名:", file.name);
-    console.log("编码后的文件名:", encodedFileName);
+//     console.log("原始文件名:", file.name);
+//     console.log("编码后的文件名:", encodedFileName);
     
-     formData.append("file", file, encodeURIComponent(file.name));
+//      formData.append("file", file, encodeURIComponent(file.name));
      
 
-     fetch(url, {
-         method: "POST",
-         headers: {
-             "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69"
-         },
-         body: formData
-     })
+//      fetch(url, {
+//          method: "POST",
+//          headers: {
+//              "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69"
+//          },
+//          body: formData
+//      })
 
      
-     .then(response => response.json())
-     .then(data => {
-         console.log("上传成功:", data);
-         alert("文件上传成功！");
-     })
-     .catch(error => {
-         console.error("上传失败:", error);
-         alert("文件上传失败，请重试！");
-     });
- }
+//      .then(response => response.json())
+//      .then(data => {
+//          console.log("上传成功:", data);
+//          alert("文件上传成功！");
+//      })
+//      .catch(error => {
+//          console.error("上传失败:", error);
+//          alert("文件上传失败，请重试！");
+//      });
+//  }
+
+async function uploadFile(file) {
+    const baseUrl = "https://106d9.pluscdn.eu.org/api";
+    const apiKey = "XXK505Z-6ZQMY6E-JQK42BF-W9GJF69";
+    const workspaceSlug = "sspu";
+
+    const formData = new FormData();
+    formData.append("file", file, encodeURIComponent(file.name));
+
+    try {
+        // Step 1: 上传 PDF 文件
+        const uploadResponse = await fetch(`${baseUrl}/v1/document/upload`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: formData
+        });
+
+        const uploadResult = await uploadResponse.json();
+        console.log("上传结果:", uploadResult);
+
+        if (!uploadResponse.ok || !uploadResult.documents || !uploadResult.documents.length) {
+            throw new Error("文件上传失败或无文档信息");
+        }
+
+        const documentLocation = uploadResult.documents[0].location;
+
+        // Step 2: 直接更新嵌入向量（无需手动生成嵌入）
+        const updateResponse = await fetch(`${baseUrl}/v1/workspace/${workspaceSlug}/update-embeddings`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                adds: [documentLocation],
+                deletes: []
+            })
+        });
+
+        const updateResult = await updateResponse.json();
+        console.log("更新向量结果:", updateResult);
+
+        if (!updateResponse.ok) {
+            throw new Error("更新向量失败");
+        }
+
+        alert("文件上传并成功更新嵌入向量！");
+    } catch (err) {
+        console.error("错误：", err);
+        alert("操作失败：" + err.message);
+    }
+}
+
+
+
 
     //退出登录
         // 退出登录按钮事件
@@ -465,6 +703,28 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
     const clearBtn = document.getElementById("clearBtn");
     // const chatHistory = document.getElementById("chat-history");
 
+
+
+// 假设 username 是 "ssjxgsj"
+// fetch('/api/resolve_user_id', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ username: 'ssjxgsj' })
+// })
+// .then(res => res.json())
+// .then(data => {
+//     if (data.success) {
+//         const userId = data.user_id;
+//         // 用 userId 请求 chat 数据
+//         fetch(`/api/get_chats?user_id=${userId}`)
+//             .then(res => res.json())
+//             .then(chatData => {
+//                 console.log('用户聊天记录:', chatData);
+//             });
+//     } else {
+//         console.error('解析用户失败:', data.message);
+//     }
+// });
 
   // 生成或获取用户 ID
 function getOrCreateUserId() {

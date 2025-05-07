@@ -18,10 +18,14 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h3>历史对话</h3>
+                <!-- 切换页面 -->
+                <button id="recomond" class="btn secondary">研究方向推荐</button>
+                <button id="logoutBtn" class="btn exit">退出登录</button>
+
 
                 <!-- 在 HTML 中添加模式切换按钮 -->
                 <!-- 模式切换按钮和状态提示 -->
-                <div class="mode-switch">
+                <!-- <div class="mode-switch"> -->
                     <!-- 当前模式: 任务助手模式 -->
                     <button id="modeToggle" >点击切换模式</button> 
                     <div id="currentModeDisplay" >任务助手模式</div>
@@ -31,7 +35,7 @@
 
                      <!-- <p id="currentModeDisplay">当前模式: 任务助手模式</p> -->
 
-                </div>
+                <!-- </div> -->
                 <!-- <button id="changemodel" class="btn new-chat" title="点击切换资源建议模式或文档解析查询模式">
                     <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     切换对话模式
@@ -53,14 +57,33 @@
          
         <!-- 右侧：对话区域 -->
         <main class="chat-container">
-            <div id="chatContent" class="chat-history markdown-body"></div>
+                <!-- 欢迎信息区域 -->
+            <!-- <div id="welcomeMessage" class="welcome-message">
+                <p>欢迎您！这里是您的对话界面，请输入您的任务描述开始对话。</p>
+            </div> -->
+
+            <div id="chatContent" class="chat-history markdown-body">
+                    <!-- 对话内容将动态加载到这里 -->
+
+                    <div id="welcomeMessage" class="welcome-message">
+                        <p>欢迎您！这里是您的对话界面，请输入您的任务描述开始对话。</p>
+                    </div>
+
+            </div>
             
             <div class="chat-input-container">
-                <textarea id="userInput" placeholder="请输入您的任务描述...（Shift+Enter换行）"></textarea>
+                <!-- <textarea id="userInput" placeholder="请输入您的任务描述...（Shift+Enter换行）"></textarea> -->
+                <!-- 输入提示 -->
+                <div class="autocomplete-wrapper">
+                    <textarea id="userInput" placeholder="请输入您的任务描述...（Shift+Enter换行）"></textarea>
+                    <div id="shadowText" class="shadow-text"></div>
+                    <div id="suggestionList" class="suggestions"></div>
+                </div>
+
                 <div class="button-group">
                     <button id="clearBtn" class="btn danger">清除对话</button>
                     <button id="sendBtn" class="btn primary">发送</button>
-                    <button id="logoutBtn" class="btn exit">退出登录</button>
+                    
                     <button id="openUpload" class="btn file">上传附件</button>
                     <input type="file" id="fileInput" title="上传附件" style="display: none;"  accept=".doc, .docx, .pdf, .txt">
                     <button id="imageUploadBtn" class="btn image">上传图片</button>

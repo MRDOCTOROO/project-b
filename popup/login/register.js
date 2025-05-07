@@ -2,8 +2,9 @@ document.getElementById("registerBtn").addEventListener("click", function() {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
     const confirmPassword = document.getElementById("confirm-password").value;
+    const relname = document.getElementById("relname").value;
 
-    if (!username || !password || !confirmPassword) {
+    if (!username || !password || !confirmPassword ||!relname) {
         alert("所有字段都是必填项！");
         return;
     }
@@ -14,14 +15,14 @@ document.getElementById("registerBtn").addEventListener("click", function() {
     }
 
     // 向后端发送注册请求
-    registerUser(username, password);
+    registerUser(username, password, relname);
 });
 
-function registerUser(username, password) {
+function registerUser(username, password, relname) {
     fetch("http://127.0.0.1:5000/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, relname})
     })
     .then(response => response.json())
     .then(data => {

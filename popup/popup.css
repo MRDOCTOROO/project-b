@@ -364,3 +364,68 @@ textarea {
 }
 
 /* 三种模式切换样式 */
+
+
+/* 输入提示 */
+.autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  .shadow-text {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    color: #aaa;
+    pointer-events: none;
+    white-space: pre-wrap;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  
+  .suggestion-item {
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  
+  .suggestion-item:hover {
+    background: #f0f0f0;
+  }
+
+  
+
+  /* 简单样式 */
+/* .suggestion-list {
+    position: absolute;
+    list-style: none;
+    background: white;
+    border: 1px solid #ccc;
+    margin-top: 2px;
+    padding: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 99;
+  }
+  
+  .suggestion-list li {
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  
+  .suggestion-list li:hover, .suggestion-list li.active {
+    background-color: #eee;
+  }
+   */
