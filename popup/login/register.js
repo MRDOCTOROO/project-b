@@ -19,7 +19,7 @@ document.getElementById("registerBtn").addEventListener("click", function() {
 });
 
 function registerUser(username, password, relname) {
-    fetch("http://127.0.0.1:5000/api/register", {
+    fetch("http://10.100.1.122:5000/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password, relname})

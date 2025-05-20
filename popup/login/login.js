@@ -38,7 +38,7 @@ loginBtn.addEventListener('click', function() {
 
 // 登录用户函数
 function loginUser(username, password) {
-    fetch('http://127.0.0.1:5000/api/login', {
+    fetch('http://10.100.1.122:5000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

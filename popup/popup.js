@@ -28,7 +28,7 @@ textarea.addEventListener('input', () => {
 
 async function fetchSuggestions(inputValue) {
   try {
-    const res = await fetch(`http://localhost:5000/api/suggestions?q=${encodeURIComponent(inputValue)}`);
+    const res = await fetch(`http://10.100.1.122:5000/api/suggestions?q=${encodeURIComponent(inputValue)}`);
     const data = await res.json();
     const matches = data.suggestions || [];
     updateSuggestions(matches, inputValue);
@@ -104,6 +104,31 @@ async function getCurrentUser() {
     return user_id;
 }
 
+// 根据user_id获取真实姓名匹配
+async function verifyRealName() {
+    const user_id =  await generateUserId();
+    // const user_id =  await generateUserId();
+    const verifyUrl = "http://10.100.1.122:5000/api/users/verify";
+    try {
+        const response = await fetch(verifyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user_id, real_name: "" })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Verify API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("验证后获得真实姓名：", data.real_name);
+        return data.real_name;
+    } catch (error) {
+        console.error("Error verifying real name:", error);
+        return null;
+    }
+}
+
 // 调用 Flask API 接口获取关联用户信息
 async function fetchRelatedUsers(username) {
     const apiUrl = `https://xgtj.bbzb.ddns-ip.net/api/users/${encodeURIComponent(username)}`;
@@ -121,31 +146,7 @@ async function fetchRelatedUsers(username) {
 }
 
 // 动态更新页面内容
-// function updateChatContent(users) {
-//     const chatContent = document.getElementById("chatContent");
-//     const welcomeMessage = document.getElementById("welcomeMessage");
 
-//     // 清空欢迎消息
-//     if (welcomeMessage) {
-//         chatContent.removeChild(welcomeMessage);
-//     }
-
-//     if (!users || users.length === 0) {
-//         chatContent.innerHTML = "<p>未找到与您关联的用户信息。</p>";
-//         return;
-//     }
-
-//     // 添加关联用户信息
-//     users.forEach(user => {
-//         const userInfoDiv = document.createElement("div");
-//         userInfoDiv.className = "user-info";
-//         userInfoDiv.innerHTML = `
-//             <strong>研究推荐用户:</strong> ${user.user.name} (${user.user.email})<br>
-//             <strong>相关研究主题:</strong> ${user.topic_name} (ID: ${user.topic_id})
-//         `;
-//         chatContent.appendChild(userInfoDiv);
-//     });
-// }
 function updateChatContent(users) {
     const chatContent = document.getElementById("chatContent");
     const welcomeMessage = document.getElementById("welcomeMessage");
@@ -176,10 +177,25 @@ function updateChatContent(users) {
 
 
 // 初始化页面
+// async function initrel() {
+//     const currentUser = await getCurrentUser(); // 获取当前登录用户
+//     const relatedUsers = await fetchRelatedUsers(currentUser); // 查询关联用户
+//     updateChatContent(relatedUsers); // 更新页面内容
+// }
 async function initrel() {
-    const currentUser = await getCurrentUser(); // 获取当前登录用户
-    const relatedUsers = await fetchRelatedUsers(currentUser); // 查询关联用户
-    updateChatContent(relatedUsers); // 更新页面内容
+    
+    const currentUser = await getCurrentUser(); // 获取用户 ID
+    let relatedUsers = await fetchRelatedUsers(currentUser); // 第一次尝试直接用 ID 查找
+
+    // 如果未找到，尝试用真实中文名再次请求
+    if (!relatedUsers || relatedUsers.length === 0) {
+        const realName = await verifyRealName(currentUser);
+        if (realName) {
+            relatedUsers = await fetchRelatedUsers(realName);
+        }
+    }
+
+    updateChatContent(relatedUsers);
 }
 initrel(); // 初始化页面
 //图片解析
@@ -218,7 +234,7 @@ async function parseImage(file) {
 
     try {
         // 发送图片文件到OCR API
-        const response = await fetch('http://127.0.0.1:5000/ocr', {
+        const response = await fetch('http://10.100.1.122:5000/ocr', {
             method: 'POST',
             body: formData
         });
@@ -327,7 +343,7 @@ async function loadUserChats() {
     const user_id = await generateUserId(); // 假设 generateUserId() 从 Session 获取用户ID
     console.log("获取对话列表是的 ID:", user_id); // 检查 user_id 是否正确
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`);
+        const response = await fetch(`http://10.100.1.122:5000/api/get_chats?user_id=${user_id}`);
         const data = await response.json();
         // console.log(data);
         console.log("获取的对话列表", data);
@@ -412,7 +428,7 @@ document.getElementById('newChatBtn').addEventListener('click', async () => {
     console.log(user_id);
     // 发送到后端创建对话
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/create_chat', {
+        const response = await fetch('http://10.100.1.122:5000/api/create_chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id, title: newChatTitle })
@@ -452,7 +468,7 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
         try {
             const user_id = await generateUserId();
             const response = await fetch(
-                `http://127.0.0.1:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`,
+                `http://10.100.1.122:5000/api/delete_chat?user_id=${user_id}&chat_id=${chatId}`,
                 { method: 'DELETE' }
             );
 
@@ -604,9 +620,15 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
 //      });
 //  }
 
+
+
 async function uploadFile(file) {
-    const baseUrl = "https://106d9.pluscdn.eu.org/api";
-    const apiKey = "XXK505Z-6ZQMY6E-JQK42BF-W9GJF69";
+    // const baseUrl = "https://106d9.pluscdn.eu.org/api";
+    // const apiKey = "XXK505Z-6ZQMY6E-JQK42BF-W9GJF69";
+    const baseUrl = "http://10.100.1.122:3001/api";
+    
+    const apiKey = "C6W2NTM-RW8432R-GYAFS9F-KPG2SMP";
+     
     const workspaceSlug = "sspu";
 
     const formData = new FormData();
@@ -783,7 +805,7 @@ function getOrCreateUserId() {
         console.log("加载历史对话时获取的对话ID", chatId);
         try {
             const response = await fetch(
-                `http://127.0.0.1:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
+                `http://10.100.1.122:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
                 // `http://127.0.0.1:5000/api/get_chats?user_id=${user_id}`,
                 { method: 'GET' }
             );
@@ -887,7 +909,7 @@ function getOrCreateUserId() {
             // console.log("当前userid", user_id);
             // console.log("当前message", message);
             // console.log("当前会话id", currentChatId);
-            const response = await fetch('http://127.0.0.1:5000/api/save_chat', {  // 替换为你的后端 API 地址
+            const response = await fetch('http://10.100.1.122:5000/api/save_chat', {  // 替换为你的后端 API 地址
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -981,11 +1003,23 @@ function getOrCreateUserId() {
             // });
             //曙光转发
             
-                const response = await fetch("https://106d9.pluscdn.eu.org/api/v1/workspace/sspu/chat", {
+                // const response = await fetch("https://106d9.pluscdn.eu.org/api/v1/workspace/sspu/chat", {
+                //     method: "POST",
+                //     headers: {
+                //         "Accept": "application/json",
+                //         "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
+                //         "Content-Type": "application/json"
+                //     },
+                //     body: JSON.stringify({
+                //         "message": params,
+                //         "mode": "chat"
+                //     })
+                // });
+                   const response = await fetch("http://10.100.1.122:3001/api/v1/workspace/sspu/chat ", {
                     method: "POST",
                     headers: {
                         "Accept": "application/json",
-                        "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
+                        "Authorization": "Bearer C6W2NTM-RW8432R-GYAFS9F-KPG2SMP",
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
@@ -998,6 +1032,7 @@ function getOrCreateUserId() {
             // const response = await fetch("http://10.100.1.92:6080/aiforward882682715139211264/chat/completions", {
             //     method: "POST",
             //     headers: {
+            
             //         "Content-Type": "application/json",
             //         "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
             //     },
@@ -1034,7 +1069,7 @@ function getOrCreateUserId() {
             
              // 发送ai消息到后端存储
             //  let ai_response = botReply;
-             const response2 = await fetch('http://127.0.0.1:5000/api/save_chat', {  // 替换为你的后端 API 地址
+             const response2 = await fetch('http://10.100.1.122:5000/api/save_chat', {  // 替换为你的后端 API 地址
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
