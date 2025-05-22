@@ -4,7 +4,9 @@
     "description": "A tool to query resource availability based on task complexity.",
     "version": "1.0",
     "permissions": [
-      "storage"
+      "storage",
+      "activeTab",
+      "scripting"
     ],
     "action": {
       "default_popup": "popup/login/login.html", 

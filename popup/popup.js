@@ -105,10 +105,33 @@ async function getCurrentUser() {
 }
 
 // 根据user_id获取真实姓名匹配
+// async function verifyRealName() {
+//     const user_id =  await generateUserId();
+//     // const user_id =  await generateUserId();
+//     const verifyUrl = "http://10.100.1.122:5000/api/users/verify";
+//     try {
+//         const response = await fetch(verifyUrl, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ user_id: user_id, real_name: "" })
+//         });
+
+//         if (!response.ok) {
+//             throw new Error(`Verify API error: ${response.status}`);
+//         }
+
+//         const data = await response.json();
+//         console.log("验证后获得真实姓名：", data.real_name);
+//         return data.real_name;
+//     } catch (error) {
+//         console.error("Error verifying real name:", error);
+//         return null;
+//     }
+// }
 async function verifyRealName() {
-    const user_id =  await generateUserId();
-    // const user_id =  await generateUserId();
+    const user_id = await generateUserId();
     const verifyUrl = "http://10.100.1.122:5000/api/users/verify";
+
     try {
         const response = await fetch(verifyUrl, {
             method: "POST",
@@ -121,8 +144,8 @@ async function verifyRealName() {
         }
 
         const data = await response.json();
-        console.log("验证后获得真实姓名：", data.real_name);
-        return data.real_name;
+        console.log("验证后获得真实姓名：", data.user?.relname);
+        return data.user?.relname || null;
     } catch (error) {
         console.error("Error verifying real name:", error);
         return null;
@@ -131,7 +154,7 @@ async function verifyRealName() {
 
 // 调用 Flask API 接口获取关联用户信息
 async function fetchRelatedUsers(username) {
-    const apiUrl = `https://xgtj.bbzb.ddns-ip.net/api/users/${encodeURIComponent(username)}`;
+    const apiUrl = `http://10.100.1.122:5001/api/users/${encodeURIComponent(username)}`;
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
@@ -1032,7 +1055,7 @@ function getOrCreateUserId() {
             // const response = await fetch("http://10.100.1.92:6080/aiforward882682715139211264/chat/completions", {
             //     method: "POST",
             //     headers: {
-            
+
             //         "Content-Type": "application/json",
             //         "Authorization": "Bearer XXK505Z-6ZQMY6E-JQK42BF-W9GJF69",
             //     },
@@ -1158,13 +1181,26 @@ function getOrCreateUserId() {
     - GPU平均使用率 = ${systemLoad.totalGpuUsage}
     - 总 CPU 核心数 = ${systemLoad.totalCpuCores}
     - 总 CPU 线程数 = ${systemLoad.totalCpuThreads}
+    GPU 队列情况：
+- A800_MIG 队列：包含 4 张 40GB 显存的 A800 显卡，适用于轻量型、短时间任务
+- A800_MIG_long 队列：使用同样的 4 张 A800_MIG 显卡，适用于显存占用较小但运行时间较长的任务
+- gpu-long 队列：包含 4 张 80GB 显存的 A800 显卡，适合大显存、长时间训练任务
+- 独享 GPU 队列：提供 6 张 80GB 显存的 A800 显卡，仅对填写了科研方向的教师开放
 
-显卡是80G显存的A800，和使用MIG切分的40显存的A800
- 以上是集群的cpu和GPU的部分信息。根据上边的系统资源使用状况，结合用户需求给出资源分配的合理建议，在回答的示例中首先输出当前系统状态。
- 回答应该尽可能地简短专业，所有回答优先使用中文。
+CPU 队列情况：
+- cpu_long 队列：适合运行时间较长的 CPU 密集型任务
+- comput 队列：CPU 短队列，适用于 1 至 4 小时的短任务
+
+请根据上述系统资源状况和队列设置，结合用户任务需求，给出合理的资源分配建议。回答应简洁、专业，使用中文。
+用户的问题与系统资源无关，请直接聚焦问题本身作答。如果问题描述不清楚，请引导用户提供更具体的信息，或建议联系管理员处理
 
 
     用户需求：${message}
+
+    回答要求：
+- 回答必须使用中文
+- 如果问题涉及资源申请、任务安排或系统负载，展示系统状态并提供合理建议
+- 如果问题与资源无关，不要展示系统资源信息
     `;
 
             return prompt;
