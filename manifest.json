@@ -27,8 +27,11 @@
     "host_permissions": [
       "https://openrouter.ai/*",
       "http://*/*",
-      "https://*/*",
-      "https://106d9.pluscdn.eu.org"
-    ]
+      "https://*/*"
+    ],
+    "content_security_policy": {
+
+    "extension_pages": "script-src 'self' https://unpkg.com; object-src 'self';"
+  }
   }
   

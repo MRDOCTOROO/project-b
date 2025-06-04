@@ -1,8 +1,34 @@
 // 页面切换
 
-document.getElementById("recomond").addEventListener("click", () => {
-    window.location.href = "recomond.html";
-  });
+// popup.js
+// 知识图谱跳转
+document.addEventListener('DOMContentLoaded', function() {
+    const showRelationGraphBtn = document.getElementById('showRelationGraphBtn');
+
+    if (showRelationGraphBtn) {
+        showRelationGraphBtn.addEventListener('click', function() {
+            // 跳转到 relation 目录下的 relation.html
+            // 注意：这里是相对路径
+            window.location.href = 'relation/relation.html';
+        });
+    }
+});
+
+//跳转到任务监控页面
+// popup.js
+document.addEventListener("DOMContentLoaded", function () {
+  const monitoringBtn = document.getElementById("monitoring-btn");
+  if (monitoringBtn) {
+    monitoringBtn.addEventListener("click", function () {
+      window.location.href = "monitoring/monitoring.html";
+    });
+  }
+});
+
+
+// document.getElementById("recomond").addEventListener("click", () => {
+//     window.location.href = "recomond.html";
+//   });
 
 //提示建议
 
@@ -91,6 +117,74 @@ textarea.addEventListener('blur', () => {
 
 document.addEventListener("DOMContentLoaded", () => {
 
+    // 获取用户进程
+async function getuserId() {
+  // 模拟：返回一个用户名，例如从后端登录态或环境变量获取
+  const user_id =  await generateUserId();
+  return user_id; // 示例
+}
+//系统资源获取
+async function fetchGpuData() {
+  const urls = [
+    "http://10.100.1.98:8000/g1",
+    "http://10.100.1.98:8000/g2",
+    "http://10.100.1.98:8000/g3"
+  ];
+
+  const responses = await Promise.all(urls.map(url => fetch(url)));
+  const allData = await Promise.all(responses.map(res => res.json()));
+  return allData.flat(); // 合并所有 GPU 数据
+}
+
+function extractMemoryUsed(memoryStr) {
+  // 从 "39417MiB / 40192MiB" 中提取数值部分
+  const match = memoryStr.match(/(\d+)\s*MiB/);
+  return match ? parseInt(match[1]) : 0;
+}
+
+async function getUserGpuUsage() {
+  const userId = await getuserId();
+  console.log('写死调试用的userId展示1111-----:', userId);
+//   const userId = getCurrentUser()
+  const gpuData = await fetchGpuData();
+
+  const userTasks = [];
+
+  for (const gpuEntry of gpuData) {
+    const { gpu, memory_usage, user, processes } = gpuEntry;
+
+    const matchingUsers = user?.filter(u => u.username && u.username.includes(userId));
+    if (matchingUsers && matchingUsers.length > 0) {
+      // 获取当前 GPU 上该用户的所有进程
+      const userProcesses = processes?.filter(p => p.name.includes("python")) || [];
+      const processNames = userProcesses.map(p => p.name);
+      const usedMemory = extractMemoryUsed(memory_usage);
+
+      userTasks.push({
+        gpu_id: gpu,
+        memory_used: `${usedMemory} MiB`,
+        process_names: processNames
+      });
+    }
+  }
+
+  return userTasks;
+}
+
+// 示例：使用这个函数来获取并展示该用户的 GPU 使用信息
+getUserGpuUsage().then(userTasks => {
+  if (userTasks.length === 0) {
+    console.log("当前用户没有运行任务。");
+  } else {
+    userTasks.forEach(task => {
+      console.log(`GPU ${task.gpu_id} 使用情况:`);
+      console.log(`- 显存使用: ${task.memory_used}`);
+      console.log(`- 进程名: ${task.process_names.join(", ")}`);
+    });
+  }
+});
+// 系统资源获取end
+
 //推荐用户信息
 
 // 获取当前登录用户的用户名（这里假设通过某种方式获取，例如从浏览器扩展的存储中读取）
@@ -103,6 +197,8 @@ async function getCurrentUser() {
     console.log("查询用户推荐的关键字：", user_id);
     return user_id;
 }
+
+
 
 // 根据user_id获取真实姓名匹配
 // async function verifyRealName() {
@@ -522,11 +618,22 @@ document.getElementById('chatList').addEventListener('click', async (e) => {
 
 
 // // 页面加载时初始化
+
+// 搜索
+// 搜索功能（与加载对话列表逻辑无关）
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    const keyword = e.target.value.toLowerCase();
+    document.querySelectorAll('.chat-item').forEach(item => {
+        const title = item.querySelector('.chat-title').textContent.toLowerCase();
+        item.style.display = title.includes(keyword) ? 'flex' : 'none';
+    });
+});
+
 // document.addEventListener('DOMContentLoaded', async () => {
 //     await initChatList();
 // });
 
-// // 搜索功能
+// // // 搜索功能
 // document.getElementById('searchInput').addEventListener('input', (e) => {
 //     const keyword = e.target.value.toLowerCase();
 //     document.querySelectorAll('.chat-item').forEach(item => {
@@ -783,7 +890,7 @@ function getOrCreateUserId() {
         }
 
         let user_id = data.user_id; // 获取存储的 user_id
-        console.log("user_id在getorcreat中获取本地的===>", user_id);
+        console.log("user_id在getorcreat中获取本地的最初的获取userid函数===>", user_id);
 
         if (!user_id) {
         //   user_id = 'user_' + Math.random().toString(36).substr(2, 9); // 生成新的 ID
@@ -818,6 +925,7 @@ function getOrCreateUserId() {
   
 //   generateUserId();
 //end 用户ID
+
 
     
 
@@ -1002,6 +1110,96 @@ function getOrCreateUserId() {
         }
     }
 
+// 拼接真实姓名获取论文推荐
+async function sendPromptMessage(messageText) {
+    const user_id = await generateUserId();
+    const currentChatItem = document.querySelector('.chat-item.active');
+
+    if (!currentChatItem) {
+        console.error("未选择对话，请先创建或选择一个对话");
+        return;
+    }
+
+    const chat_id = currentChatItem.dataset.id;
+
+    // 添加用户消息到页面
+    addMessageToChat("You", messageText, "right");
+
+    // 显示加载中消息
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'chat-message left';
+    loadingDiv.innerHTML = '<div class="message-header">Assistant</div><div class="loading">思考中...</div>';
+    document.getElementById('chatContent').appendChild(loadingDiv);
+
+    // 存储用户消息到后端
+    try {
+        const response = await fetch('http://10.100.1.122:5000/api/save_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: user_id,
+                message: messageText,
+                chat_id: chat_id
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`存储消息失败: ${errorData.message}`);
+        }
+    } catch (error) {
+        console.error('消息存储失败:', error);
+        addMessageToChat("System", `错误：${error.message}`, "left");
+        return;
+    }
+
+    // 构造 prompt 并发送给 chat 模型
+    let prompt = "";
+    if (currentMode === 'resource') {
+        prompt = await updateSystemLoad(messageText);
+    } else if (currentMode === 'document') {
+        prompt = `你是一个专业的AI助手……\n用户的问题是： ${messageText}`;
+    } else if (currentMode === 'image') {
+        prompt = `现在给你的字符是从图片中识别的文字……\n用户的问题是： ${messageText}`;
+        currentMode = 'resource';
+        updateModeDisplay();
+    } else {
+        prompt = `你是一个协助科研的大模型`;
+    }
+
+    console.log("最终 prompt：", prompt);
+    chat(prompt); // 👈 调用 AI 服务
+}
+
+document.getElementById('paper-re').addEventListener('click', async () => {
+    // 获取真实姓名
+    const username = await verifyRealName();
+
+    if (!username) {
+        alert("获取用户名失败，无法推荐论文。");
+        return;
+    }
+
+    // 拼接推荐 prompt
+    // console.log("论文推荐处获取的真实姓名===>", username);
+    const prompt = `我是${username}，帮我推荐论文`;
+
+    // console.log("论文推荐prompt：", prompt);
+    //存储消息
+    await sendPromptMessage(prompt); 
+
+
+    // 调用 chat 函数处理
+    chat(prompt);
+});
+
+async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    userInput.value = "";
+    await sendPromptMessage(message);
+}
 
     //回答系统资源使用状况模式的提示词
     async function chat(params) {

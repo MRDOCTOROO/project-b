@@ -19,8 +19,10 @@
             <div class="sidebar-header">
                 <h3>历史对话</h3>
                 <!-- 切换页面 -->
-                <button id="recomond" class="btn secondary">论文推荐</button>
+                <!-- <button id="recomond" class="btn secondary">任务监控</button> -->
+                 <button id="monitoring-btn" class="btn exit">任务监控</button>
                 <button id="logoutBtn" class="btn exit">退出登录</button>
+                <button id="showRelationGraphBtn" class="btn exit">知识图谱</button>
 
 
                 <!-- 在 HTML 中添加模式切换按钮 -->
@@ -52,7 +54,7 @@
             </div>
             <ul id="chatList" class="chat-list"></ul>
         </aside>
-
+        <!-- 左侧会话结束 -->
         <!-- 创建和切换对话 -->
          
         <!-- 右侧：对话区域 -->
@@ -90,12 +92,14 @@
                     <input type="file" id="imageFileInput" title="上传图片" style="display: none;" accept="image/*">
 
                     <button id="clearBtn" class="btn danger">清空输入</button>
+                    <button id="paper-re" class="btn danger">论文推荐</button>
 
                     <button id="sendBtn" class="btn primary">发送</button>
                     
                 </div>
             </div>
         </main>
+        
     </div>
 
     <script type="module" src="popup.js"></script>
