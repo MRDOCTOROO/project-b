@@ -1,31 +1,23 @@
-// 获取 HTML 元素
-const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
-const switchToRegisterBtn = document.getElementById('switch-to-register');
-const switchToLoginBtn = document.getElementById('switch-to-login');
-const loginBtn = document.getElementById('loginBtn');
-const registerBtn = document.getElementById('registerBtn');
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('loginBtn');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
 
-// 切换到注册页面
-switchToRegisterBtn.addEventListener('click', function() {
-    loginForm.style.display = 'none';
-    registerForm.style.display = 'block';
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                alert('请输入用户名和密码。');
+                return;
+            }
+            
+            loginUser(username, password);
+        });
+    }
 });
 
-
-
-// 登录功能
-loginBtn.addEventListener('click', function() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    // 通过 fetch 向后端发送登录请求
-    loginUser(username, password);
-});
-
-
-
-// 登录用户函数
 function loginUser(username, password) {
     fetch('http://10.100.1.122:5000/api/login', {
         method: 'POST',
@@ -35,16 +27,16 @@ function loginUser(username, password) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // ✅ 使用 chrome.storage.local 存储用户 ID
-            chrome.storage.local.set({ user_id: username }, () => {
-                console.log('登录成功！用户ID:', username);
-                // 跳转到插件主界面或欢迎页面
+            chrome.storage.local.set({ user_id: data.user_id || username }, () => {
+                console.log('登录成功！用户ID:', data.user_id || username);
                 window.location.href = "../popup.html";
             });
         } else {
             alert('登录失败：' + data.message);
         }
     })
-    .catch(error => console.error('请求失败:', error));
+    .catch(error => {
+        console.error('请求失败:', error);
+        alert('登录请求失败，请检查网络或联系管理员。');
+    });
 }
-

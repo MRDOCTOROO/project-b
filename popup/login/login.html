@@ -1,36 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 / 注册</title>
-    <link rel="stylesheet" href="register.css">
+    <title>登录</title>
+    <link rel="stylesheet" href="auth.css">
 </head>
 <body>
-    <div id="auth-container">
-        <!-- 登录部分 -->
-        <div id="login-form">
-            <h2>登录</h2>
-            <label for="username">用户名:</label>
-            <input type="text" id="username" placeholder="请输入用户名">
-            <label for="password">密码:</label>
-            <input type="password" id="password" placeholder="请输入密码">
-            <button id="loginBtn">登录</button>
-            <p>没有账号？<a href="register.html" id="switch-to-register">注册</a></p>
+    <div class="auth-container">
+        <h2>登录</h2>
+        <div class="input-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" placeholder="请输入您的用户名">
         </div>
-
-        <!-- 注册部分 -->
-        <!-- <div id="register-form" style="display: none;">
-            <h2>注册</h2>
-            <label for="new-username">用户名:</label>
-            <input type="text" id="new-username" placeholder="请输入用户名">
-            <label for="new-password">密码:</label>
-            <input type="password" id="new-password" placeholder="请输入密码">
-            <button id="registerBtn">注册</button>
-            <p>已有账号？<a href="javascript:void(0);" id="switch-to-login">登录</a></p>
+        <div class="input-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" placeholder="请输入您的密码">
         </div>
-    </div> -->
-
+        <button id="loginBtn" class="btn-primary">登录</button>
+        <p class="switch-link">
+            没有账号？ <a href="register.html">立即注册</a>
+        </p>
+    </div>
     <script src="login.js"></script>
 </body>
 </html>
