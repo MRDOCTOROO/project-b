@@ -399,8 +399,8 @@ function initializeApp(user_id) {
         }
     });
 
-    document.getElementById('newChatBtn').addEventListener('click', async () => {
-        const newChatTitle = `newchat ${chatHistory.length + 1}`;
+    async function createNewChat() {
+        const newChatTitle = `新对话`;
         console.log(user_id);
         try {
             const response = await fetch('http://10.100.1.122:5000/api/create_chat', {
@@ -424,14 +424,28 @@ function initializeApp(user_id) {
                 time: new Date().toLocaleString(),
                 content: []
             };
-            chatHistory.push(newChat);
+            chatHistory.unshift(newChat);
             renderChatList();
-            loadChatHistory(newChat.id);
+            
+            // 移除所有 active 类
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+            
+            // 为新对话添加 active 类
+            const newChatItem = document.querySelector(`[data-id="${newChat.id}"]`);
+            if (newChatItem) {
+                newChatItem.classList.add('active');
+            }
+            
+            await loadChatHistory(newChat.id);
+            return newChat.id;
 
         } catch (error) {
             console.error("创建新对话失败:", error);
+            return null;
         }
-    });
+    }
+
+    document.getElementById('newChatBtn').addEventListener('click', createNewChat);
 
     document.getElementById('chatList').addEventListener('click', async (e) => {
         if (e.target.closest('.delete-btn')) {
@@ -622,11 +636,15 @@ function initializeApp(user_id) {
     }
 
     async function sendPromptMessage(messageText) {
-        const currentChatItem = document.querySelector('.chat-item.active');
+        let currentChatItem = document.querySelector('.chat-item.active');
 
         if (!currentChatItem) {
-            console.error("未选择对话，请先创建或选择一个对话");
-            return;
+            const newChatId = await createNewChat();
+            if (!newChatId) {
+                console.error("创建新对话失败");
+                return;
+            }
+            currentChatItem = document.querySelector('.chat-item.active');
         }
 
         const chat_id = currentChatItem.dataset.id;
@@ -659,21 +677,8 @@ function initializeApp(user_id) {
             }
 
             if (isFirstMessage) {
-                const titlePrompt = `请将以下内容概括为5个字以内的短标题: "${messageText}"`;
-                const titleResponse = await fetch("http://10.100.1.122:3001/api/v1/workspace/sspu/chat", {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "Authorization": "Bearer C6W2NTM-RW8432R-GYAFS9F-KPG2SMP",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ "message": titlePrompt, "mode": "chat" })
-                });
-                const titleData = await titleResponse.json();
-                if (titleData.textResponse) {
-                    const newTitle = titleData.textResponse.replace(/["'“]/g, '').trim();
-                    await updateChatTitle(chat_id, newTitle);
-                }
+                // 重新加载对话列表以更新标题
+                await loadUserChats();
             }
 
             let prompt = "";
@@ -764,83 +769,99 @@ function initializeApp(user_id) {
 
     async function updateSystemLoad(message) {
         try {
+            // Helper to parse memory string like "37MiB / 40192MiB"
+            function parseMemory(memoryStr) {
+                if (!memoryStr) return { used: 0, total: 0 };
+                const parts = memoryStr.replace(/MiB/g, '').split('/');
+                if (parts.length === 2) {
+                    const used = parseInt(parts[0].trim(), 10);
+                    const total = parseInt(parts[1].trim(), 10);
+                    return { used, total };
+                }
+                return { used: 0, total: 0 };
+            }
+
+            // 1. Fetch general system status for CPU info
             const response = await fetch("http://10.100.1.98:5000/full_status");
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             const data = await response.json();
-            console.log("API response:", data);
-
-            let totalGpuUsage = 0;
-            let gpuCount = 0;
+            
             let totalCpuUsage = 0;
             let machineCount = 0;
-            let gpuDetails = {};
-            let cpuDetails = {
-                totalCores: 0,
-                totalThreads: 0
-            };
-
             Object.values(data).forEach(machine => {
-                machine.gpu.forEach(gpu => {
-                    totalGpuUsage += gpu.utilization_gpu || 0;
-                    gpuCount++;
-                    gpuDetails[`Machine_${machine.machine}_GPU${gpu.id}`] = {
-                        name: gpu.name,
-                        utilization: gpu.utilization_gpu + "%",
-                        temperature: gpu.temperature + "°C",
-                        memory: `${gpu.memory_free}GB / ${gpu.memory_total}GB`
-                    };
-                });
                 totalCpuUsage += machine.system.cpu_usage || 0;
-                cpuDetails.totalCores += machine.system.cpu_cores || 0;
-                cpuDetails.totalThreads += machine.system.cpu_threads || 0;
                 machineCount++;
             });
-
-            const averageGpuUsage = gpuCount > 0 ? (totalGpuUsage / gpuCount).toFixed(2) + "%" : "0%";
             const averageCpuUsage = machineCount > 0 ? (totalCpuUsage / machineCount).toFixed(2) + "%" : "0%";
 
-            const systemLoad = {
-                averageCpuUsage,
-                totalCpuCores: cpuDetails.totalCores,
-                totalCpuThreads: cpuDetails.totalThreads,
-                totalGpuUsage: averageGpuUsage,
-                gpus: gpuDetails
-            };
+            // 2. Fetch detailed GPU data from the correct endpoints
+            const gpuData = await fetchGpuData();
 
-            console.log("Updated System Load:", systemLoad);
+            // 3. Process GPU data to find available cards
+            let available40G = 0;
+            let total40G = 0;
+            let available80G = 0;
+            let total80G = 0;
 
+            gpuData.forEach(gpu => {
+                const memory = parseMemory(gpu.memory_usage);
+                // A GPU is considered occupied if the user array is not empty.
+                const isOccupied = gpu.user && gpu.user.length > 0;
+
+                if (memory.total > 70000) { // ~80GB card (A800)
+                    total80G++;
+                    if (!isOccupied) {
+                        available80G++;
+                    }
+                } else if (memory.total > 30000) { // ~40GB card (A800_MIG)
+                    total40G++;
+                    if (!isOccupied) {
+                        available40G++;
+                    }
+                }
+            });
+
+            // 4. Construct the new, improved prompt
             const prompt = `
-    当前系统状态：
-    - CPU平均使用率 = ${systemLoad.averageCpuUsage}
-    - GPU平均使用率 = ${systemLoad.totalGpuUsage}
-    - 总 CPU 核心数 = ${systemLoad.totalCpuCores}
-    - 总 CPU 线程数 = ${systemLoad.totalCpuThreads}
-    GPU 队列情况：
-- A800_MIG 队列：包含 4 张 40GB 显存的 A800 显卡，适用于轻量型、短时间任务
-- A800_MIG_long 队列：使用同样的 4 张 A800_MIG 显卡，适用于显存占用较小但运行时间较长的任务
-- gpu-long 队列：包含 4 张 80GB 显存的 A800 显卡，适合大显存、长时间训练任务
-- 独享 GPU 队列：提供 6 张 80GB 显存的 A800 显卡，仅对填写了科研方向的教师开放
+当前系统实时资源状态：
+- CPU平均使用率: ${averageCpuUsage}
+- 可用 A800_MIG (40GB) 显卡数量: ${available40G} / ${total40G}
+- 可用 A800 (80GB) 显卡数量: ${available80G} / ${total80G}
 
-CPU 队列情况：
-- cpu_long 队列：适合运行时间较长的 CPU 密集型任务
-- comput 队列：CPU 短队列，适用于 1 至 4 小时的短任务
+GPU 队列信息:
+- A800_MIG 队列 (40GB显卡): 适用于轻量型、短时间或显存占用小的长时任务。
+- gpu-long 队列 (80GB显卡): 适合需要大显存、长时间的训练任务。
+- 独享 GPU 队列 (80GB显卡): 仅对特定教师开放。
 
-请根据上述系统资源状况和队列设置，结合用户任务需求，给出合理的资源分配建议。回答应简洁、专业，使用中文。
-用户的问题与系统资源无关，请直接聚焦问题本身作答。如果问题描述不清楚，请引导用户提供更具体的信息，或建议联系管理员处理
+CPU 队列信息:
+- cpu_long 队列: 适合运行时间较长的 CPU 密集型任务。
+- comput 队列: CPU 短队列，适用于 1 至 4 小时的短任务。
 
-    用户需求：${message}
+任务要求:
+请你作为一名专业的HPC管理员，根据上述实时系统资源状况和队列信息，为用户提供专业、合理的资源分配建议。
 
-    回答要求：
-- 回答必须使用中文
-- 如果问题涉及资源申请、任务安排或系统负载，展示系统状态并提供合理建议
-- 如果问题与资源无关，不要展示系统资源信息
-    `;
+指导原则:
+1.  **分析用户需求**: 首先判断用户的任务类型（例如：模型训练、数据处理、短时测试等）以及对显存和计算时间的需求。
+2.  **匹配资源**:
+    - 如果用户任务需要大显存（如超过35GB），或进行大规模模型训练，优先推荐使用 80GB 的 A800 显卡。如果可用，直接建议申请。如果不可用，告知用户当前资源紧张，建议稍后再试或优化任务。
+    - 如果用户任务显存需求不大（如小于35GB），或者属于开发、测试、短时推理等，推荐使用 40GB 的 A800_MIG 显卡。
+    - 如果用户没有明确显存需求，请根据任务描述（如“训练大模型”、“跑个小测试”）主动判断并推荐合适的显卡。
+    - 如果用户问题与资源申请无关，请直接回答用户问题，不要展示资源状态。
+3.  **给出具体建议**: 回答应明确指出建议使用的队列名称和显卡类型，并解释原因。例如：“根据您的描述，建议您申请一张 80GB 的 A800 显卡，使用 gpu-long 队列，因为您的任务需要较大的显存支持。”
+4.  **处理不明确信息**: 如果用户问题描述不清楚，主动提问以获取更多信息，例如：“为了给您更准确的建议，您能说明一下您任务大概需要多少显存吗？”
+
+用户需求：${message}
+
+请根据以上信息生成回复。
+`;
             return prompt;
+
         } catch (error) {
-            console.error("Failed to fetch system status:", error);
-            return null;
+            console.error("Failed to fetch system status or generate prompt:", error);
+            // Fallback prompt if APIs fail
+            return `你是一个协助科研的大模型。用户的问题是：${message}`;
         }
     }
 

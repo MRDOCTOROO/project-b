@@ -124,6 +124,10 @@ async function fetchContainerUsage(userId) {
     try {
         const url = `http://10.100.1.97:30668/user_${userId}/_search?pretty`;
         const response = await fetch(url);
+        if (response.status === 404) {
+            renderContainerRecords([]);
+            return;
+        }
         if (!response.ok) throw new Error(`网络响应错误: ${response.statusText}`);
         const data = await response.json();
         renderContainerRecords(data.hits.hits);
@@ -138,7 +142,7 @@ function renderContainerRecords(records) {
     container.innerHTML = ""; // 清空
 
     if (records.length === 0) {
-        // 如果没有记录，可以不显示
+        container.innerHTML = `<div class="card"><p>当前用户没有使用记录</p></div>`;
         return;
     }
 

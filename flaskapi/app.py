@@ -153,6 +153,9 @@ def create_chat():
     user_id = data.get('user_id')
     title = data.get('title')
 
+    if not user_id:
+        return jsonify({'success': False, 'message': '用户未登录'}), 401
+
     print(f"[DEBUG] 收到请求 user_id={user_id}, title={title}")
 
     user = User.query.filter_by(username=user_id).first()
@@ -317,6 +320,15 @@ def save_chat():
             'success': False,
             'message': '对话不存在或不属于当前用户'
         }), 404
+
+    # 如果是用户发送的第一条消息，则更新对话标题
+    if sender == 'user':
+        # 检查是否已存在该对话的用户消息
+        is_first_message = not ChatRecord.query.filter_by(chat_id=chat_id, sender='user').first()
+        if is_first_message:
+            # 从消息内容生成新标题, 取前30个字符
+            new_title = message[:30]
+            chat.title = new_title
 
     # 创建新消息记录
     new_chat_record = ChatRecord(
