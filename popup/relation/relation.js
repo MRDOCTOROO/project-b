@@ -1,346 +1,296 @@
-// relation/relation.js
-
 document.addEventListener('DOMContentLoaded', function () {
-    const nodes = new vis.DataSet([]);
-    const edges = new vis.DataSet([]);
-
+    // --- 元素获取 ---
     const container = document.getElementById('mynetwork');
     const searchInput = document.getElementById('searchInput');
     const searchButton = document.getElementById('searchButton');
-    const backButton = document.getElementById('backButton'); // 获取返回按钮
+    const backButton = document.getElementById('backButton');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
-    const data = {
-        nodes: nodes,
-        edges: edges
-    };
+    // --- 后端 API ---
+    const GRAPH_API_URL = 'http://10.100.1.122:5002';
+    const AUTH_API_URL = 'http://10.100.1.122:5000/api/users/verify';
 
-    const options = {
-        nodes: {
-            shape: 'dot',
-            size: 20,
-            font: {
-                size: 14,
-                color: '#333'
-            },
-            borderWidth: 2,
-            color: {
-                border: '#2B7CE9',
-                background: '#97C2E5',
-                highlight: {
-                    border: '#2B7CE9',
-                    background: '#D2E5FF'
-                },
-                hover: {
-                    border: '#2B7CE9',
-                    background: '#D2E5FF'
-                }
-            }
-        },
-        edges: {
-            width: 1,
-            color: { inherit: 'from' },
-            arrows: 'to',
-            font: {
-                size: 10,
-                align: 'middle'
-            },
-            smooth: {
-                enabled: true,
-                type: "continuous"
-            }
-        },
-        physics: {
-            enabled: true,
-            barnesHut: {
-                gravitationalConstant: -2000,
-                centralGravity: 0.3,
-                springLength: 120,
-                springConstant: 0.05,
-                damping: 0.09,
-                avoidOverlap: 0.5
-            },
-            solver: 'barnesHut'
-        },
-        interaction: {
-            dragNodes: true,
-            zoomView: true,
-            dragView: true,
-            navigationButtons: true
-        },
-        layout: {
-            randomSeed: undefined,
-            improvedLayout: true
-        }
-    };
-
+    // --- Vis.js 数据集和网络实例 ---
+    const nodes = new vis.DataSet([]);
+    const edges = new vis.DataSet([]);
+    const data = { nodes, edges };
+    const options = getGraphOptions(); // 使用函数获取配置，保持整洁
     const network = new vis.Network(container, data, options);
 
-    const BACKEND_API_URL = 'http://10.100.1.122:5002'; // 确保这里是您的 Flask 后端地址
-
-    // 辅助函数：显示加载状态
-    function showLoading(message = '加载中...') {
-        let overlay = document.getElementById('loadingOverlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'loadingOverlay';
-            overlay.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(255, 255, 255, 0.8);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-                font-size: 1.5em;
-                color: #333;
-                flex-direction: column;
-            `;
-            const textSpan = document.createElement('span');
-            textSpan.id = 'loadingText';
-            overlay.appendChild(textSpan);
-            document.body.appendChild(overlay);
+    // --- 事件监听 ---
+    searchButton.addEventListener('click', () => performSearch(searchInput.value.trim(), true));
+    searchInput.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            performSearch(searchInput.value.trim(), true);
         }
-        document.getElementById('loadingText').innerText = message;
-        overlay.style.display = 'flex'; // 确保显示
-    }
+    });
+    backButton.addEventListener('click', () => window.location.href = '../popup.html');
+    network.on("click", handleNodeClick);
+    network.on("doubleClick", handleNodeDoubleClick);
 
-    // 辅助函数：隐藏加载状态
-    function hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-    }
+    // --- 初始化 ---
+    initializeApp();
 
-    // --- 图谱核心逻辑 ---
+    // =================================================================
+    // --- 函数定义 ---
+    // =================================================================
 
-    // 1. 初始化加载图谱数据
-    async function loadInitialGraph() {
-        showLoading('正在加载初始图谱...');
+    /**
+     * 初始化应用，加载图谱并搜索当前用户
+     */
+    async function initializeApp() {
+        showLoading('正在初始化图谱...');
         try {
-            const response = await fetch(`${BACKEND_API_URL}/initial_graph`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            await loadInitialGraph();
+            const realName = await getRealName();
+            if (realName) {
+                showLoading(`正在定位用户: ${realName}`);
+                await performSearch(realName, false);
             }
-            const graphData = await response.json();
-            console.log("初始图谱数据:", graphData);
-
-            nodes.clear();
-            edges.clear();
-            nodes.add(graphData.nodes);
-            edges.add(graphData.edges);
-
-            network.fit();
         } catch (error) {
-            console.error("加载初始图谱失败:", error);
-            alert("加载初始图谱失败，请检查后端服务是否运行。");
+            console.error("初始化失败:", error);
+            showError("初始化图谱失败，请稍后重试。");
         } finally {
             hideLoading();
         }
     }
 
-    // 2. 点击节点展开相关信息
-    network.on("click", async function (params) {
+    /**
+     * 加载初始图谱数据
+     */
+    async function loadInitialGraph() {
+        const graphData = await fetchApi(`${GRAPH_API_URL}/initial_graph`);
+        nodes.clear();
+        edges.clear();
+        nodes.add(graphData.nodes);
+        edges.add(graphData.edges);
+        network.fit();
+    }
+
+    /**
+     * 处理节点点击事件，展开节点
+     * @param {object} params - vis.js 点击事件参数
+     */
+    async function handleNodeClick(params) {
         if (params.nodes.length > 0) {
-            const clickedNodeId = params.nodes[0];
-            console.log("点击了节点:", clickedNodeId);
+            const nodeId = params.nodes[0];
             showLoading('正在展开节点...');
             try {
-                const response = await fetch(`${BACKEND_API_URL}/expand_node?node_id=${clickedNodeId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const newGraphData = await response.json();
-                console.log("展开节点数据:", newGraphData);
-
+                const newGraphData = await fetchApi(`${GRAPH_API_URL}/expand_node?node_id=${nodeId}`);
                 nodes.add(newGraphData.nodes);
                 edges.add(newGraphData.edges);
-
-                // network.fit(); // 根据需要，是否每次点击都重新适应视图
             } catch (error) {
-                console.error("展开节点失败:", error);
-                alert("展开节点失败，请稍后再试。");
+                console.error(`展开节点 ${nodeId} 失败:`, error);
+                // 这里可以选择不弹窗，避免打断用户操作
             } finally {
                 hideLoading();
             }
         }
-    });
-
-    // 3. 搜索功能 - 增加 showNotFoundAlert 参数
+    }
+    
     /**
-     * 执行节点搜索并将结果居中高亮。
-     * @param {string} query 搜索关键词。
-     * @param {boolean} [showNotFoundAlert=true] 是否在未找到匹配节点时显示弹窗提示。默认为 true。
+     * 处理节点双击事件
+     * @param {object} params - vis.js 双击事件参数
      */
-    async function performSearch(query, showNotFoundAlert = true) {
+    function handleNodeDoubleClick(params) {
+        if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const nodeData = nodes.get(nodeId);
+            alert(`节点信息:\nID: ${nodeData.id}\n标签: ${nodeData.label}\n类型: ${nodeData.group || '未知'}`);
+        }
+    }
+
+    /**
+     * 执行搜索
+     * @param {string} query - 搜索关键词
+     * @param {boolean} showAlert - 未找到时是否弹窗提示
+     */
+    async function performSearch(query, showAlert) {
         if (!query) {
-            if (showNotFoundAlert) { // 只有需要弹窗时才提示
-                alert("请输入搜索内容！");
-            }
+            if (showAlert) alert("请输入搜索内容。");
             return;
         }
-
-        showLoading('正在搜索...');
+        showLoading(`正在搜索 "${query}"...`);
         try {
-            const response = await fetch(`${BACKEND_API_URL}/search_node?query=${encodeURIComponent(query)}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const searchResults = await response.json();
-            console.log("搜索结果:", searchResults);
-
+            const searchResults = await fetchApi(`${GRAPH_API_URL}/search_node?query=${encodeURIComponent(query)}`);
             if (searchResults.nodes.length > 0) {
                 nodes.update(searchResults.nodes);
                 edges.update(searchResults.edges);
-
-                network.focus(searchResults.nodes[0].id, {
-                    scale: 1.5,
-                    animation: {
-                        duration: 1000,
-                        easingFunction: "easeOutCubic"
-                    }
-                });
+                network.focus(searchResults.nodes[0].id, { scale: 1.5, animation: true });
                 network.selectNodes([searchResults.nodes[0].id]);
-            } else {
-                if (showNotFoundAlert) { // 只有需要弹窗时才提示
-                    alert("未找到匹配的节点。");
-                } else {
-                    console.log(`自动搜索未找到匹配 "${query}" 的节点。`); // 自动搜索时只在控制台输出
-                }
+            } else if (showAlert) {
+                alert("未找到匹配的节点。");
             }
         } catch (error) {
             console.error("搜索失败:", error);
-            if (showNotFoundAlert) { // 只有需要弹窗时才提示
-                alert("搜索失败，请稍后再试。");
-            } else {
-                console.error("自动搜索失败:", error);
-            }
+            if (showAlert) alert("搜索失败，请稍后重试。");
         } finally {
             hideLoading();
         }
     }
 
-    // 搜索按钮的事件监听器，调用 performSearch，此时 showNotFoundAlert 默认为 true (即会弹窗)
-    searchButton.addEventListener('click', async function () {
-        const query = searchInput.value.trim();
-        await performSearch(query, true); // 明确传入 true，表示手动搜索失败需要弹窗
-    });
-
-    // 4. 双击事件 (可选：例如弹出节点详情或编辑框)
-    network.on("doubleClick", function (params) {
-        if (params.nodes.length > 0) {
-            const doubleClickedNodeId = params.nodes[0];
-            const nodeData = nodes.get(doubleClickedNodeId);
-            console.log("双击了节点:", nodeData);
-            alert(`双击了节点: ${nodeData.label || nodeData.id}\n类型: ${nodeData.group || '未知'}`);
-        }
-    });
-
-    // --- 返回按钮逻辑 ---
-    if (backButton) {
-        backButton.addEventListener('click', function () {
-            window.location.href = '../popup.html';
-        });
-    }
-
-    // --- 用户名获取与真实姓名验证 ---
-
     /**
-     * 异步获取用户 ID。
-     * @returns {Promise<string|null>} 一个 Promise，解析为用户 ID 字符串或 null。
+     * 从 Chrome 存储中获取用户ID
+     * @returns {Promise<string|null>}
      */
     function getUserId() {
         return new Promise((resolve, reject) => {
-            try {
-                chrome.storage.local.get('user_id', (data) => {
-                    if (chrome.runtime.lastError) {
-                        console.error("获取用户 ID 失败:", chrome.runtime.lastError);
-                        reject(chrome.runtime.lastError);
-                        return;
-                    }
-                    const userId = data.user_id;
-                    if (userId) {
-                        console.log("已存在的用户 ID:", userId);
-                        resolve(userId);
-                    } else {
-                        console.log("本地没有找到用户 ID，返回 null。");
-                        resolve(null);
-                    }
-                });
-            } catch (error) {
-                console.error("getUserId 发生异常:", error);
-                reject(error);
-            }
+            chrome.storage.local.get('user_id', (data) => {
+                if (chrome.runtime.lastError) {
+                    return reject(chrome.runtime.lastError);
+                }
+                resolve(data.user_id || null);
+            });
         });
     }
 
     /**
-     * 验证用户 ID 并从后端获取真实姓名。
-     * @returns {Promise<string|null>} 一个 Promise，解析为用户真实姓名字符串或 null。
+     * 获取用户真实姓名
+     * @returns {Promise<string|null>}
      */
-    async function verifyRealName() {
-        const user_id = await getUserId();
-        if (!user_id) {
-            console.warn("无法获取用户 ID，跳过真实姓名验证。");
-            return null;
-        }
-
-        const verifyUrl = "http://10.100.1.122:5000/api/users/verify"; // 确保此 URL 正确
+    async function getRealName() {
+        const userId = await getUserId();
+        if (!userId) return null;
 
         try {
-            const response = await fetch(verifyUrl, {
+            const data = await fetchApi(AUTH_API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: user_id, real_name: "" })
+                body: JSON.stringify({ user_id: userId, real_name: "" })
             });
-
-            if (!response.ok) {
-                throw new Error(`Verify API error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log("验证后获得真实姓名：", data.user?.relname);
             return data.user?.relname || null;
         } catch (error) {
-            console.error("验证真实姓名时出错:", error);
+            console.error("验证真实姓名失败:", error);
             return null;
         }
     }
 
-    // --- 页面加载时执行的逻辑 ---
-
     /**
-     * 页面加载时初始化节点搜索：获取真实姓名并搜索。
+     * 封装的 fetch 请求
+     * @param {string} url - 请求URL
+     * @param {object} options - fetch 请求选项
+     * @returns {Promise<object>} - 解析后的 JSON 数据
      */
-    async function initializeNodeSearchOnLoad() {
-        console.log("页面加载完成，开始初始化节点搜索...");
-        showLoading('正在加载图谱并搜索当前用户...');
-
-        try {
-            await loadInitialGraph(); // 先加载初始图谱
-
-            const realName = await verifyRealName();
-
-            if (realName) {
-                console.log(`获取到真实姓名: ${realName}，开始自动搜索节点...`);
-                // 调用 performSearch，并传入 false，表示自动搜索时不弹窗
-                await performSearch(realName, false);
-            } else {
-                console.log("未获取到真实姓名，跳过自动搜索用户节点。");
-            }
-        } catch (error) {
-            console.error("初始化节点搜索失败:", error);
-            // 自动加载失败，这里也可以选择不弹窗，只在控制台记录
-            // alert("初始化图谱和用户搜索失败，请稍后再试。");
-        } finally {
-            hideLoading();
+    async function fetchApi(url, options) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        return response.json();
     }
 
-    // 页面完全加载后执行初始化函数
-    initializeNodeSearchOnLoad();
+    // --- UI 辅助函数 ---
+    function showLoading(message) {
+        loadingOverlay.querySelector('span').textContent = message;
+        loadingOverlay.style.display = 'flex';
+    }
 
-}); // DOMContentLoaded 结束
+    function hideLoading() {
+        loadingOverlay.style.display = 'none';
+    }
+    
+    function showError(message) {
+        const networkContainer = document.getElementById('mynetwork');
+        networkContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: red;">${message}</div>`;
+    }
+
+    /**
+     * 获取 vis.js 的配置选项
+     * @returns {object}
+     */
+    function getGraphOptions() {
+        return {
+            nodes: {
+                shape: 'icon',
+                icon: {
+                    face: "'Font Awesome 5 Free'",
+                    weight: "900", // Font Awesome 5 Free solid style
+                    code: '\uf0c0', // fa-users
+                    size: 50,
+                    color: 'var(--primary-color)'
+                },
+                shapeProperties: {
+                    borderRadius: 10
+                },
+                font: {
+                    size: 16,
+                    color: '#343434',
+                    strokeWidth: 0.5,
+                    strokeColor: '#ffffff'
+                },
+                borderWidth: 3,
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.2)',
+                    size: 7,
+                    x: 3,
+                    y: 3
+                },
+                color: {
+                    border: 'var(--primary-color)',
+                    background: '#ffffff',
+                    highlight: {
+                        border: 'var(--primary-hover-color)',
+                        background: '#f0f8ff'
+                    },
+                    hover: {
+                        border: 'var(--primary-hover-color)',
+                        background: '#f0f8ff'
+                    }
+                }
+            },
+            edges: {
+                width: 2,
+                color: {
+                    color: '#cccccc',
+                    highlight: 'var(--primary-color)',
+                    hover: 'var(--primary-color)',
+                    inherit: false
+                },
+                arrows: {
+                    to: { enabled: true, scaleFactor: 0.7 }
+                },
+                smooth: {
+                    enabled: true,
+                    type: "dynamic",
+                    roundness: 0.5
+                }
+            },
+            physics: {
+                enabled: true,
+                forceAtlas2Based: {
+                    gravitationalConstant: -50,
+                    centralGravity: 0.01,
+                    springConstant: 0.08,
+                    springLength: 100,
+                    damping: 0.4,
+                    avoidOverlap: 1
+                },
+                solver: 'forceAtlas2Based'
+            },
+            interaction: {
+                hover: true,
+                navigationButtons: false,
+                tooltipDelay: 200,
+                dragNodes: true,
+                dragView: true,
+                zoomView: true
+            },
+            groups: {
+                // 定义不同类型的节点样式
+                user: {
+                    icon: { code: '\uf007', color: '#ff6347' } // fa-user (Tomato)
+                },
+                paper: {
+                    icon: { code: '\uf15c', color: '#4682b4' } // fa-file-alt (SteelBlue)
+                },
+                topic: {
+                    icon: { code: '\uf07b', color: '#32cd32' } // fa-folder (LimeGreen)
+                },
+                default: {
+                     icon: { code: '\uf128', color: '#6e6e73' } // fa-question
+                }
+            }
+        };
+    }
+});

@@ -1,107 +1,139 @@
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    width: 600px; /* 根据插件需要调整宽度 */
-    height: 700px; /* 根据插件需要调整高度 */
-    overflow: hidden; /* 防止滚动条 */
-    display: flex;
-    flex-direction: column;
+/* --- 全局与根变量 (从 popup.css 继承) --- */
+:root {
+    --bg-color: #f0f2f5;
+    --sidebar-bg: #ffffff;
+    --primary-color: #007aff;
+    --primary-hover-color: #005ecb;
+    --text-primary: #000000;
+    --text-secondary: #6e6e73;
+    --border-color: #e5e5ea;
+    --input-bg: #f0f2f5;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --border-radius-lg: 18px;
+    --border-radius-md: 12px;
+    --border-radius-sm: 8px;
 }
 
+/* --- 基础布局 --- */
+body {
+    font-family: var(--font-family);
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    width: 800px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+/* --- 页面头部 --- */
 .header {
-    background-color: #f4f4f4;
-    padding: 10px 15px;
-    border-bottom: 1px solid #eee;
-    text-align: center;
-    position: relative; /* 用于定位返回按钮 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--sidebar-bg);
+    padding: 12px 20px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .header h1 {
     margin: 0;
-    font-size: 1.2em;
-    color: #333;
-}
-
-.back-button {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 8px 12px;
-    background-color: #6c757d; /* 灰色调 */
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-}
-
-.back-button:hover {
-    background-color: #5a6268;
+    font-size: 20px;
+    font-weight: 600;
 }
 
 .search-container {
-    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 #searchInput {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 70%;
-    margin-right: 5px;
-}
-
-#searchButton {
-    padding: 8px 12px;
-    background-color: #007bff;
-    color: white;
+    padding: 10px 16px;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+    background-color: var(--input-bg);
+    width: 250px;
+}
+#searchInput:focus {
+    outline: 2px solid var(--primary-color);
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    border: none;
     cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 14px;
 }
 
-#searchButton:hover {
-    background-color: #0056b3;
+.btn.primary {
+    background: var(--primary-color);
+    color: white;
+}
+.btn.primary:hover {
+    background: var(--primary-hover-color);
 }
 
+.btn.secondary {
+    background: var(--input-bg);
+    color: var(--text-primary);
+}
+.btn.secondary:hover {
+    background: #e0e0e0;
+}
+
+/* --- 关系图容器 --- */
 #mynetwork {
-    flex-grow: 1; /* 占据剩余空间 */
-    /* 重要：当flex-grow为1时，父容器有固定高度，子元素的高度会由flex-grow控制
-       这里移除具体的 height 值，让 flex 机制来管理
-    */
-    border: 1px solid lightgray;
-    background-color: #f9f9f9;
-    overflow: hidden; /* 确保图谱内部不会溢出 */
+    flex-grow: 1;
+    border-radius: var(--border-radius-lg);
+    background-color: var(--sidebar-bg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    position: relative; /* For loading overlay */
 }
 
-/* 加载覆盖层样式 */
+/* --- 加载覆盖层 --- */
 #loadingOverlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    font-size: 1.5em;
-    color: #333;
-    flex-direction: column; /* 让文字和加载图标垂直居中 */
+    flex-direction: column;
+    gap: 16px;
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 500;
 }
 
-#loadingOverlay::after {
-    content: '';
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
+.spinner {
+    border: 4px solid var(--input-bg);
+    border-top: 4px solid var(--primary-color);
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     animation: spin 1s linear infinite;
-    margin-top: 10px;
 }
 
 @keyframes spin {

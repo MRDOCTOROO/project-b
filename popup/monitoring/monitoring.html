@@ -1,36 +1,26 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>GPU Monitoring</title>
+  <title>监控页面</title>
   <link rel="stylesheet" href="monitoring.css" />
 </head>
 <body>
-  <h1>GPU 使用情况</h1>
+  <div class="container">
+    <div class="page-header">
+      <h1>监控信息</h1>
+      <button id="back-btn">返回</button>
+    </div>
 
-  <!-- ✅ 返回首页按钮 -->
-  <button id="back-btn">返回首页</button>
-
-  <div id="gpu-tasks"></div>
-
-  <script src="monitoring.js"></script>
-
-</body>
-
-<!-- xin 0-->
-<head>
-  <meta charset="UTF-8" />
-  <title>容器使用记录</title>
-  <link rel="stylesheet" href="monitoring.css" />
-</head>
-<body>
-  <div class="page-container">
-    <h1>您的容器使用记录</h1>
-    <div id="container-list" class="container-list"></div>
+    <div id="gpu-tasks" class="content-grid">
+      <!-- GPU 任务卡片将通过 JS 动态插入 -->
+    </div>
+    
+    <div id="container-list" class="content-grid">
+        <!-- 容器使用记录将通过 JS 动态插入 -->
+    </div>
   </div>
 
   <script src="monitoring.js"></script>
 </body>
-
 </html>

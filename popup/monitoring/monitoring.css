@@ -1,190 +1,174 @@
-/* html, body {
-  width: 500px;
-  height: 600px;
-  margin: 0;
-  padding: 20px;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  box-sizing: border-box;
+/* --- 全局与根变量 (从 popup.css 继承) --- */
+:root {
+    --bg-color: #f0f2f5;
+    --sidebar-bg: #ffffff;
+    --chat-bg: #ffffff;
+    --primary-color: #007aff;
+    --primary-hover-color: #005ecb;
+    --text-primary: #000000;
+    --text-secondary: #6e6e73;
+    --border-color: #e5e5ea;
+    --input-bg: #f0f2f5;
+    --message-sent-bg: #007aff;
+    --message-sent-text: #ffffff;
+    --message-received-bg: #e9e9eb;
+    --message-received-text: #000000;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --border-radius-lg: 18px;
+    --border-radius-md: 12px;
+    --border-radius-sm: 8px;
 }
 
-* {
-  box-sizing: inherit;
+/* --- 基础布局 --- */
+body {
+    font-family: var(--font-family);
+    margin: 0;
+    padding: 24px;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    width: 800px;
+    height: 600px;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
-.gpu-task {
-  background: #f0f0f0;
-  margin: 10px 0;
-  padding: 10px;
-  border-radius: 8px;
-} */
-
-/* popup/monitoring/monitoring.css */
-
-/* 页面整体尺寸和基础样式 */
-html, body {
-  width: 500px; /* 保留页面宽度 */
-  height: 600px; /* 保留页面高度 */
-  margin: 0;
-  padding: 20px; /* 增加内边距，防止内容紧贴边缘 */
-  overflow-y: auto; /* 允许垂直滚动，以防内容超出高度 */
-  overflow-x: hidden; /* 隐藏水平滚动条 */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 使用更现代的字体 */
-  box-sizing: border-box; /* 确保 padding 和 border 包含在 width/height 内 */
-  background-color: #f4f7f6; /* 页面背景色 */
-  color: #333; /* 默认文本颜色 */
-  line-height: 1.6; /* 行高 */
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-/* 确保所有元素都继承 box-sizing */
-* {
-  box-sizing: inherit;
+/* --- 页面头部 --- */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-h1 {
-  color: #2c3e50;
-  text-align: center;
-  margin-bottom: 25px; /* 调整标题下边距 */
-  font-size: 1.8em; /* 调整标题字号 */
+.page-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
 }
 
-/* 返回首页按钮样式 */
+/* --- 返回按钮 --- */
 #back-btn {
-  display: block; /* 块级元素，独占一行 */
-  width: fit-content; /* 宽度适应内容 */
-  margin: 0 auto 25px auto; /* 居中显示，并增加底部外边距 */
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease; /* 鼠标悬停时的过渡效果 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 14px;
 }
 
 #back-btn:hover {
-  background-color: #0056b3;
+    background: var(--primary-hover-color);
 }
 
-/* GPU 任务卡片容器 */
-#gpu-tasks {
-  display: grid; /* 使用 Grid 布局 */
-  /* 让每列至少 220px 宽，最多占 1 份可用空间，根据容器自动调整列数 */
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 15px; /* 卡片之间的间距 */
-  padding: 0; /* 容器内边距由 body 的 padding 控制 */
+/* --- 内容卡片 --- */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
 }
 
-/* 单个 GPU 任务卡片样式 */
-.gpu-task-card {
-  background-color: #ffffff; /* 白色背景 */
-  border: 1px solid #e0e0e0; /* 浅灰色边框 */
-  border-radius: 8px; /* 圆角 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* 轻微阴影 */
-  padding: 18px; /* 卡片内边距 */
-  transition: transform 0.2s ease-in-out; /* 悬停动画 */
+.card {
+    background: var(--sidebar-bg);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.gpu-task-card:hover {
-  transform: translateY(-3px); /* 鼠标悬停时上浮 */
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-.gpu-task-card h2 {
-  color: #34495e;
-  margin-top: 0;
-  margin-bottom: 12px; /* 调整标题下边距 */
-  font-size: 1.3em; /* 调整卡片标题字号 */
-  border-bottom: 1px solid #eee; /* 底部边框 */
-  padding-bottom: 8px; /* 标题底部填充 */
+.card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
 }
 
-.gpu-task-card p {
-  margin-bottom: 8px; /* 段落间距 */
-  font-size: 0.9em; /* 调整段落字号 */
+.card p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
-.gpu-task-card strong {
-  color: #555;
+.card p strong {
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
-/* 内存进度条容器 */
+/* --- 进程标签 --- */
+.process-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.tag {
+    background-color: var(--input-bg);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* --- 进度条 --- */
 .memory-progress-bar {
-  width: 100%;
-  background-color: #e0e0e0; /* 进度条背景色 */
-  border-radius: 5px;
-  height: 12px; /* 进度条高度 */
-  overflow: hidden; /* 确保填充条不溢出 */
-  margin-top: 5px;
-  margin-bottom: 15px;
+    width: 100%;
+    background-color: var(--input-bg);
+    border-radius: var(--border-radius-sm);
+    height: 10px;
+    overflow: hidden;
+    margin-top: 12px;
 }
 
-/* 内存进度条填充 */
 .memory-progress-fill {
-  height: 100%;
-  background-color: #28a745; /* 绿色填充色 */
-  border-radius: 5px;
-  transition: width 0.5s ease-in-out; /* 宽度变化的平滑过渡 */
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: var(--border-radius-sm);
+    transition: width 0.5s ease-in-out;
 }
 
-/* 错误信息样式 */
+/* --- 错误信息 --- */
 .error-message {
-  text-align: center;
-  color: #dc3545; /* 红色错误提示 */
-  font-weight: bold;
-  margin-top: 30px;
+    text-align: center;
+    color: #ff3b30; /* Apple-style error color */
+    font-weight: 500;
+    padding: 40px;
+    background: var(--sidebar-bg);
+    border-radius: var(--border-radius-lg);
 }
 
-/* "无"进程时的样式 */
-.gpu-task-card p:last-child {
-  font-style: italic;
-  color: #777;
+/* --- 滚动条样式 --- */
+::-webkit-scrollbar {
+    width: 6px;
 }
-
-
-/* 容器css */
-/* monitoring.css */
-
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f5f7fa;
-  margin: 0;
-  padding: 20px;
+::-webkit-scrollbar-track {
+    background: transparent;
 }
-
-.page-container {
-  max-width: 900px;
-  margin: auto;
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
 }
-
-h1 {
-  text-align: center;
-  color: #333;
-}
-
-.container-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.container-card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  transition: transform 0.2s ease;
-}
-
-.container-card:hover {
-  transform: scale(1.02);
-}
-
-.container-card h3 {
-  margin-top: 0;
-  color: #007bff;
-}
-
-.container-card p {
-  margin: 8px 0;
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
 }
