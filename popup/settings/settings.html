@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>设置</title>
+    <link rel="stylesheet" type="text/css" href="settings.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button id="back-btn" class="header-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <h1>模型设置</h1>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <label for="model-select">选择模型:</label>
+                <select id="model-select">
+                    <option value="default">默认模型</option>
+                    <option value="custom">自定义模型</option>
+                </select>
+            </div>
+            <div id="custom-model-settings">
+                <div class="setting-item">
+                    <label for="api-url">API 地址:</label>
+                    <input type="text" id="api-url" name="api-url" placeholder="例如, https://api.openai.com/v1/chat/completions">
+                </div>
+                <div class="setting-item">
+                    <label for="api-key">API 密钥:</label>
+                    <input type="password" id="api-key" name="api-key">
+                </div>
+                <div class="setting-item">
+                    <label for="model-name">模型名称:</label>
+                    <input type="text" id="model-name" name="model-name" placeholder="例如, gpt-3.5-turbo">
+                </div>
+                <button id="verify-btn" class="btn">验证自定义模型</button>
+            </div>
+            <button id="save-btn" class="btn primary">保存设置</button>
+            <div id="verification-result"></div>
+        </div>
+    </div>
+    <script src="settings.js"></script>
+</body>
+</html>

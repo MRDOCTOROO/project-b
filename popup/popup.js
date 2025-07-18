@@ -17,6 +17,14 @@ function initializeApp(user_id) {
         });
     }
 
+    // 设置页面跳转
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', function() {
+            window.location.href = 'settings/settings.html';
+        });
+    }
+
     //跳转到任务监控页面
     const monitoringBtn = document.getElementById("monitoring-btn");
     if (monitoringBtn) {
@@ -723,22 +731,43 @@ function initializeApp(user_id) {
 
     async function chat(params, loadingDiv, chat_id) {
         try {
-            const response = await fetch("http://10.100.1.122:3001/api/v1/workspace/sspu/chat ", {
-                method: "POST",
-                headers: {
+            const modelConfig = await new Promise(resolve => chrome.storage.local.get('modelConfig', result => resolve(result.modelConfig)));
+
+            let fetchUrl, fetchHeaders, fetchBody;
+
+            if (modelConfig && modelConfig.type === 'custom') {
+                fetchUrl = modelConfig.url;
+                fetchHeaders = {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${modelConfig.key}`
+                };
+                fetchBody = JSON.stringify({
+                    model: modelConfig.name,
+                    messages: [{ role: 'user', content: params }]
+                });
+            } else {
+                // Default model settings
+                fetchUrl = "http://10.100.1.122:3001/api/v1/workspace/sspu/chat ";
+                fetchHeaders = {
                     "Accept": "application/json",
                     "Authorization": "Bearer C6W2NTM-RW8432R-GYAFS9F-KPG2SMP",
                     "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
+                };
+                fetchBody = JSON.stringify({
                     "message": params,
                     "mode": "chat"
-                })
+                });
+            }
+
+            const response = await fetch(fetchUrl, {
+                method: "POST",
+                headers: fetchHeaders,
+                body: fetchBody
             });
             
             const data = await response.json();
             console.log(data);
-            let botReply = data.textResponse;
+            let botReply = (modelConfig && modelConfig.type === 'custom') ? data.choices[0].message.content : data.textResponse;
 
             loadingDiv.remove();
             addMessageToChat("Assistant", botReply, "left");
