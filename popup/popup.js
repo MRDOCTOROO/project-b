@@ -123,10 +123,24 @@ function initializeApp(user_id) {
             "http://10.100.1.98:8000/g2",
             "http://10.100.1.98:8000/g3"
         ];
-
-        const responses = await Promise.all(urls.map(url => fetch(url)));
-        const allData = await Promise.all(responses.map(res => res.json()));
-        return allData.flat(); // 合并所有 GPU 数据
+    
+        const results = await Promise.all(
+            urls.map(async (url) => {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.error(`Failed to fetch ${url}: ${response.statusText}`);
+                        return []; // 返回空数组而不是抛出错误
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Error fetching or parsing ${url}:`, error);
+                    return []; // 返回空数组以允许其他请求成功
+                }
+            })
+        );
+    
+        return results.flat(); // 合并所有成功获取的 GPU 数据
     }
 
     function extractMemoryUsed(memoryStr) {
@@ -810,23 +824,10 @@ function initializeApp(user_id) {
                 return { used: 0, total: 0 };
             }
 
-            // 1. Fetch general system status for CPU info
-            const response = await fetch("http://10.100.1.98:5000/full_status");
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            
-            let totalCpuUsage = 0;
-            let machineCount = 0;
-            Object.values(data).forEach(machine => {
-                totalCpuUsage += machine.system.cpu_usage || 0;
-                machineCount++;
-            });
-            const averageCpuUsage = machineCount > 0 ? (totalCpuUsage / machineCount).toFixed(2) + "%" : "0%";
-
-            // 2. Fetch detailed GPU data from the correct endpoints
+            // Fetch detailed GPU data from the correct endpoints
+            console.log("Fetching GPU data...");
             const gpuData = await fetchGpuData();
+            console.log("GPU data:", gpuData);
 
             // 3. Process GPU data to find available cards
             let available40G = 0;
@@ -854,8 +855,7 @@ function initializeApp(user_id) {
 
             // 4. Construct the new, improved prompt
             const prompt = `
-当前系统实时资源状态：
-- CPU平均使用率: ${averageCpuUsage}
+当前系统实时 GPU 资源状态：
 - 可用 A800_MIG (40GB) 显卡数量: ${available40G} / ${total40G}
 - 可用 A800 (80GB) 显卡数量: ${available80G} / ${total80G}
 
@@ -864,12 +864,8 @@ GPU 队列信息:
 - gpu-long 队列 (80GB显卡): 适合需要大显存、长时间的训练任务。
 - 独享 GPU 队列 (80GB显卡): 仅对特定教师开放。
 
-CPU 队列信息:
-- cpu_long 队列: 适合运行时间较长的 CPU 密集型任务。
-- comput 队列: CPU 短队列，适用于 1 至 4 小时的短任务。
-
 任务要求:
-请你作为一名专业的HPC管理员，根据上述实时系统资源状况和队列信息，为用户提供专业、合理的资源分配建议。
+请你作为一名专业的HPC管理员，根据上述实时 GPU 资源状况和队列信息，为用户提供专业、合理的资源分配建议。
 
 指导原则:
 1.  **分析用户需求**: 首先判断用户的任务类型（例如：模型训练、数据处理、短时测试等）以及对显存和计算时间的需求。
@@ -889,6 +885,14 @@ CPU 队列信息:
 
         } catch (error) {
             console.error("Failed to fetch system status or generate prompt:", error);
+            
+            // 增强的调试信息
+            if (error.message.includes('fetch')) {
+                console.error("This might be a network issue, a CORS problem, or the endpoint is down.");
+            } else {
+                console.error("This might be a data processing issue. Check the structure of the received data.");
+            }
+
             // Fallback prompt if APIs fail
             return `你是一个协助科研的大模型。用户的问题是：${message}`;
         }
