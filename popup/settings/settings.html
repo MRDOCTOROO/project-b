@@ -1,43 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>设置</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型设置</title>
     <link rel="stylesheet" type="text/css" href="settings.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
             <button id="back-btn" class="header-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
             </button>
             <h1>模型设置</h1>
         </div>
         <div class="settings-content">
+            <!-- 模型选择 -->
             <div class="setting-item">
-                <label for="model-select">选择模型:</label>
+                <label for="model-select">
+                    <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                    选择模型
+                </label>
                 <select id="model-select">
-                    <option value="default">默认模型</option>
-                    <option value="custom">自定义模型</option>
+                    <option value="default">默认模型 (AnythingLLM)</option>
+                    <option value="custom">自定义模型 (OpenAI兼容)</option>
                 </select>
+                <p class="setting-hint">默认使用 AnythingLLM 本地知识库，或选择自定义模型连接第三方 API</p>
             </div>
-            <div id="custom-model-settings">
+
+            <!-- 自定义模型设置 -->
+            <div id="custom-model-settings" class="custom-settings hidden">
                 <div class="setting-item">
-                    <label for="api-url">API 地址:</label>
-                    <input type="text" id="api-url" name="api-url" placeholder="例如, https://api.openai.com/v1/chat/completions">
+                    <label for="api-url">
+                        <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                        API 地址
+                    </label>
+                    <input type="text" id="api-url" name="api-url" placeholder="https://api.openai.com/v1/chat/completions">
+                    <p class="setting-hint">完整的 API 端点 URL，包含路径</p>
                 </div>
+
                 <div class="setting-item">
-                    <label for="api-key">API 密钥:</label>
-                    <input type="password" id="api-key" name="api-key">
+                    <label for="api-key">
+                        <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        API 密钥
+                    </label>
+                    <input type="password" id="api-key" name="api-key" placeholder="sk-...">
+                    <p class="setting-hint">您的 API 访问密钥</p>
                 </div>
+
                 <div class="setting-item">
-                    <label for="model-name">模型名称:</label>
-                    <input type="text" id="model-name" name="model-name" placeholder="例如, gpt-3.5-turbo">
+                    <label for="model-name">
+                        <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        模型名称
+                    </label>
+                    <input type="text" id="model-name" name="model-name" placeholder="gpt-4o, gpt-3.5-turbo, claude-3-5-sonnet-20241022">
+                    <p class="setting-hint">要使用的模型名称</p>
                 </div>
-                <button id="verify-btn" class="btn">验证自定义模型</button>
+
+                <div class="button-group">
+                    <button id="verify-btn" class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        验证连接
+                    </button>
+                </div>
             </div>
-            <button id="save-btn" class="btn primary">保存设置</button>
-            <div id="verification-result"></div>
+
+            <!-- 支持的 API 说明 -->
+            <div id="api-info" class="api-info hidden">
+                <h3>支持的 API 格式</h3>
+                <ul class="api-list">
+                    <li><strong>OpenAI:</strong> api.openai.com</li>
+                    <li><strong>Claude (AWS Bedrock):</strong> bedrock-runtime.amazonaws.com</li>
+                    <li><strong>Azure OpenAI:</strong> {resource}.openai.azure.com</li>
+                    <li><strong>其他兼容 OpenAI 的 API</strong></li>
+                </ul>
+            </div>
+
+            <!-- 个人信息完善 -->
+            <div class="setting-item">
+                <label>
+                    <svg class="label-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    完善个人信息
+                </label>
+                <div class="info-card">
+                    <p class="info-text">完善个人信息可以帮助我们：</p>
+                    <ul class="info-list">
+                        <li>为您推荐研究领域相似的研究者</li>
+                        <li>在知识图谱中展示您的研究成果</li>
+                        <li>提供更精准的学术资源推荐</li>
+                    </ul>
+                    <a href="https://docs.qq.com/form/page/DRWxEc0xEckVNc091#/fill" target="_blank" class="btn primary" style="text-decoration: none; display: inline-flex;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        填写个人信息表单
+                    </a>
+                    <p class="setting-hint" style="margin-top: 8px;">填写后请等待数据更新和论文爬取完成</p>
+                </div>
+            </div>
+
+            <!-- 保存按钮 -->
+            <div class="button-group">
+                <button id="save-btn" class="btn primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    保存设置
+                </button>
+            </div>
+
+            <!-- 验证结果 -->
+            <div id="verification-result" class="verification-result hidden"></div>
         </div>
     </div>
     <script src="settings.js"></script>

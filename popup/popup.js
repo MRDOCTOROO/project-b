@@ -33,6 +33,12 @@ function initializeApp(user_id) {
         });
     }
 
+    // 研究者推荐按钮
+    const recommendationBtn = document.getElementById("recommendation-btn");
+    if (recommendationBtn) {
+        recommendationBtn.addEventListener("click", showRecommendations);
+    }
+
     //提示建议
     const textarea = document.getElementById('userInput');
     const shadow = document.getElementById('shadowText');
@@ -222,64 +228,130 @@ function initializeApp(user_id) {
 
     // 调用 Flask API 接口获取关联用户信息
     async function fetchRelatedUsers(username) {
+        if (!username) {
+            console.warn("fetchRelatedUsers: username is empty");
+            return null;
+        }
+
         const apiUrl = `http://10.100.1.122:5001/api/users/${encodeURIComponent(username)}`;
         try {
             const response = await fetch(apiUrl);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.warn(`API returned ${response.status} for user: ${username}`);
+                return null;
             }
             const data = await response.json();
-            return data;
+
+            // 确保 data 是一个数组
+            if (Array.isArray(data)) {
+                return data;
+            } else if (data && Array.isArray(data.users)) {
+                return data.users;
+            } else if (data && Array.isArray(data.data)) {
+                return data.data;
+            }
+            return null;
         } catch (error) {
             console.error("Error fetching related users:", error);
             return null;
         }
     }
 
-    // 动态更新页面内容
-    function updateChatContent(users) {
+    // 动态更新页面内容 - 研究者推荐
+    function showRelatedResearchers(users, hasError = false) {
         const chatContent = document.getElementById("chatContent");
         const welcomeMessage = document.getElementById("welcomeMessage");
 
         // 清除欢迎消息
         if (welcomeMessage) {
-            chatContent.removeChild(welcomeMessage);
+            chatContent.innerHTML = '';
+        }
+
+        // 显示加载或错误消息
+        if (hasError) {
+            addMessageToChat("System", `
+                <div style="background: #fff3cd; border-left: 4px solid #ff9500; padding: 12px; margin: 8px 0; border-radius: 8px;">
+                    <p><strong>⚠️ 推荐服务暂时不可用</strong></p>
+                    <p style="margin: 8px 0; color: #666;">研究者推荐服务可能正在维护中。您可以：</p>
+                    <ul style="margin: 8px 0; padding-left: 20px; color: #666;">
+                        <li>稍后再试</li>
+                        <li><a href="https://docs.qq.com/form/page/DRWxEc0xEckVNc091#/fill" target="_blank" style="color: #007aff; text-decoration: underline;">填写个人信息表单</a></li>
+                        <li>使用<a href="relation/relation.html" style="color: #007aff; text-decoration: underline;">知识图谱</a>搜索相关研究者</li>
+                    </ul>
+                </div>
+            `, "left", true);
+            return;
         }
 
         // 无结果提示
         if (!users || users.length === 0) {
-            chatContent.innerHTML = "<p>未找到与您关联的用户信息。</p>";
+            addMessageToChat("System", `
+                <div style="background: #e8f4ff; border-left: 4px solid #007aff; padding: 12px; margin: 8px 0; border-radius: 8px;">
+                    <p><strong>ℹ️ 未找到相关研究者</strong></p>
+                    <p style="margin: 8px 0; color: #666;">这可能是因为：</p>
+                    <ul style="margin: 8px 0; padding-left: 20px; color: #666;">
+                        <li>您尚未完善个人信息</li>
+                        <li>系统中暂无与您研究方向相似的研究者</li>
+                    </ul>
+                    <p style="margin: 8px 0; color: #666;">建议：</p>
+                    <ul style="margin: 8px 0; padding-left: 20px; color: #666;">
+                        <li><a href="https://docs.qq.com/form/page/DRWxEc0xEckVNc091#/fill" target="_blank" style="color: #007aff; text-decoration: underline;">点击填写个人信息表单</a>（填写后请等待数据更新和论文爬取完成）</li>
+                        <li>使用<a href="relation/relation.html" style="color: #007aff; text-decoration: underline;">知识图谱</a>探索相关研究者</li>
+                    </ul>
+                </div>
+            `, "left", true);
             return;
         }
 
-        // 显示用户推荐信息
+        // 显示推荐信息
+        addMessageToChat("System", `<strong>📊 根据您的研究方向，为您推荐以下相关研究者：</strong>`, "left", true);
+
         users.forEach(user => {
-            const userInfoDiv = document.createElement("div");
-            userInfoDiv.className = "user-info";
-            userInfoDiv.innerHTML = `
-                <strong>推荐用户:</strong> ${user.name} (${user.email})<br>
-                <strong>学院:</strong> ${user.college}<br>
-                <strong>相关研究主题:</strong> ${user.topic_name}
+            const userInfoHTML = `
+                <div style="background: #f9f9f9; border-left: 4px solid #007aff; padding: 12px; margin: 8px 0; border-radius: 8px;">
+                    <p><strong>👤 研究者:</strong> ${user.name || 'N/A'} ${user.email ? `(${user.email})` : ''}</p>
+                    <p><strong>🏫 学院:</strong> ${user.college || 'N/A'}</p>
+                    <p><strong>🔬 研究主题:</strong> ${user.topic_name || 'N/A'}</p>
+                </div>
             `;
-            chatContent.appendChild(userInfoDiv);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = userInfoHTML;
+            chatContent.appendChild(wrapper.firstElementChild);
         });
     }
 
-    async function initrel() {
-        const currentUser = await getCurrentUser(); // 获取用户 ID
-        let relatedUsers = await fetchRelatedUsers(currentUser); // 第一次尝试直接用 ID 查找
+    // 研究者推荐功能（由侧边栏按钮触发）
+    async function showRecommendations() {
+        // 显示加载消息
+        const chatContent = document.getElementById("chatContent");
+        const loadingMsg = document.createElement("div");
+        loadingMsg.className = "chat-message left";
+        loadingMsg.innerHTML = '<div class="message-content">正在为您查找相关研究者...</div>';
+        chatContent.appendChild(loadingMsg);
 
-        // 如果未找到，尝试用真实中文名再次请求
-        if (!relatedUsers || relatedUsers.length === 0) {
-            const realName = await verifyRealName(currentUser);
-            if (realName) {
-                relatedUsers = await fetchRelatedUsers(realName);
+        try {
+            const currentUser = await getCurrentUser();
+            let relatedUsers = await fetchRelatedUsers(currentUser);
+
+            // 如果未找到，尝试用真实中文名再次请求
+            if (!relatedUsers || relatedUsers.length === 0) {
+                const realName = await verifyRealName();
+                if (realName) {
+                    relatedUsers = await fetchRelatedUsers(realName);
+                }
             }
-        }
 
-        updateChatContent(relatedUsers);
+            // 移除加载消息
+            loadingMsg.remove();
+
+            // 显示结果（包括空结果）
+            showRelatedResearchers(relatedUsers, false);
+        } catch (error) {
+            console.error("推荐功能错误:", error);
+            loadingMsg.remove();
+            showRelatedResearchers(null, true);
+        }
     }
-    initrel(); // 初始化页面
 
     //图片解析
     const imageUploadBtn = document.getElementById("imageUploadBtn");
@@ -299,9 +371,151 @@ function initializeApp(user_id) {
 
         const file = event.target.files[0];
         if (file) {
-            await parseImage(file); // 解析图片并返回文本
+            await parseImageWithProgress(file); // 解析图片并返回文本
         }
     });
+
+    // 带进度的图片解析函数
+    async function parseImageWithProgress(file) {
+        // 显示图片预览消息
+        const imagePreview = await createImagePreviewMessage(file);
+
+        try {
+            // 更新状态为上传中
+            updateImagePreviewStatus(imagePreview, 'uploading', '正在上传图片...');
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // 使用 XMLHttpRequest 来跟踪上传进度
+            const result = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 上传进度
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        updateImagePreviewStatus(imagePreview, 'uploading', `正在上传图片... ${percentComplete}%`);
+                    }
+                });
+
+                // 上传完成，开始解析
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            resolve(result);
+                        } catch (e) {
+                            reject(new Error('解析响应失败'));
+                        }
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}`));
+                    }
+                });
+
+                xhr.addEventListener('error', () => reject(new Error('网络错误')));
+                xhr.addEventListener('abort', () => reject(new Error('上传已取消')));
+
+                xhr.open('POST', 'http://10.100.1.122:5000/ocr');
+                xhr.send(formData);
+            });
+
+            // 上传完成，更新为解析中
+            updateImagePreviewStatus(imagePreview, 'parsing', '正在识别图片内容...');
+
+            // 模拟解析延迟（如果 API 响应很快，让用户看到解析过程）
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (result.status === 'success') {
+                const ocrText = result.text;
+                handleOcrResult(ocrText);
+                console.log('OCR识别结果:', ocrText);
+
+                // 更新为成功状态
+                updateImagePreviewStatus(imagePreview, 'success', '图片识别成功');
+
+                // 显示识别结果
+                addMessageToChat("System", `
+                    <div style="margin-top: 8px;">
+                        <strong>📝 识别结果：</strong>
+                        <div style="background: #f5f5f5; padding: 8px; border-radius: 6px; margin-top: 8px; white-space: pre-wrap;">${ocrText}</div>
+                    </div>
+                `, "left", true);
+
+                // 如果用户输入框有内容，自动发送
+                if (userInput.value.trim()) {
+                    setTimeout(() => sendMessage(), 500);
+                }
+            } else {
+                updateImagePreviewStatus(imagePreview, 'error', `识别失败：${result.error || '未知错误'}`);
+            }
+        } catch (error) {
+            console.error('图片解析错误:', error);
+            updateImagePreviewStatus(imagePreview, 'error', `错误：${error.message}`);
+        }
+    }
+
+    // 创建图片预览消息
+    async function createImagePreviewMessage(file) {
+        const reader = new FileReader();
+
+        const imageSrc = await new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "chat-message right";
+        messageDiv.id = 'image-preview-' + Date.now();
+
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <div class="image-preview">
+                    <img src="${imageSrc}" alt="上传的图片" style="max-width: 100%; max-height: 200px; border-radius: 8px; display: block;">
+                    <div class="image-status" style="margin-top: 8px;">
+                        <div class="status-indicator">
+                            <div class="spinner-small"></div>
+                            <span class="status-text">准备上传...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const chatHistoryElement = document.getElementById('chatContent');
+        chatHistoryElement.appendChild(messageDiv);
+        chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+
+        return messageDiv;
+    }
+
+    // 更新图片预览状态
+    function updateImagePreviewStatus(messageDiv, status, text) {
+        const statusDiv = messageDiv.querySelector('.image-status');
+        if (!statusDiv) return;
+
+        const statusClasses = {
+            uploading: 'status-uploading',
+            parsing: 'status-parsing',
+            success: 'status-success',
+            error: 'status-error'
+        };
+
+        const icons = {
+            uploading: '<div class="spinner-small"></div>',
+            parsing: '<div class="spinner-small"></div>',
+            success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+            error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+        };
+
+        statusDiv.className = 'image-status ' + (statusClasses[status] || '');
+        statusDiv.innerHTML = `
+            <div class="status-indicator ${statusClasses[status] || ''}">
+                ${icons[status] || ''}
+                <span class="status-text">${text}</span>
+            </div>
+        `;
+    }
 
     async function parseImage(file) {
         const formData = new FormData();
@@ -312,12 +526,12 @@ function initializeApp(user_id) {
                 method: 'POST',
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             if (result.status === 'success') {
                 const ocrText = result.text;
-                handleOcrResult(ocrText); 
+                handleOcrResult(ocrText);
                 console.log('OCR识别结果:', ocrText);
                 document.getElementById('ocrResult').innerText = ocrText;
             } else {
@@ -595,6 +809,25 @@ function initializeApp(user_id) {
     const sendBtn = document.getElementById("sendBtn");
     const clearBtn = document.getElementById("clearBtn");
 
+    // 剪贴板粘贴图片功能
+    userInput.addEventListener('paste', async (event) => {
+        const items = event.clipboardData?.items;
+        if (!items) return;
+
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                event.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    currentMode = 'image';
+                    updateModeDisplay();
+                    await parseImageWithProgress(file);
+                }
+                break;
+            }
+        }
+    });
+
     async function loadChatHistory(chatId) {
         console.log("加载历史对话时获取的对话ID", chatId);
         try {
@@ -733,24 +966,15 @@ function initializeApp(user_id) {
         }
     }
 
-    document.getElementById('paper-re').addEventListener('click', async () => {
-        const username = await verifyRealName();
-        if (!username) {
-            alert("获取用户名失败，无法推荐论文。");
-            return;
-        }
-        const prompt = `我是${username}，帮我推荐论文`;
-        await sendPromptMessage(prompt); 
-    });
-
     async function chat(params, loadingDiv, chat_id) {
         try {
             const modelConfig = await new Promise(resolve => chrome.storage.local.get('modelConfig', result => resolve(result.modelConfig)));
 
             let fetchUrl, fetchHeaders, fetchBody;
+            const isCustom = modelConfig && modelConfig.type === 'custom';
 
-            if (modelConfig && modelConfig.type === 'custom') {
-                fetchUrl = modelConfig.url;
+            if (isCustom) {
+                fetchUrl = modelConfig.url.trim();
                 fetchHeaders = {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${modelConfig.key}`
@@ -760,8 +984,8 @@ function initializeApp(user_id) {
                     messages: [{ role: 'user', content: params }]
                 });
             } else {
-                // Default model settings
-                fetchUrl = "http://10.100.1.122:3001/api/v1/workspace/sspu/chat ";
+                // Default model settings (AnythingLLM)
+                fetchUrl = "http://10.100.1.122:3001/api/v1/workspace/sspu/chat";
                 fetchHeaders = {
                     "Accept": "application/json",
                     "Authorization": "Bearer C6W2NTM-RW8432R-GYAFS9F-KPG2SMP",
@@ -778,14 +1002,55 @@ function initializeApp(user_id) {
                 headers: fetchHeaders,
                 body: fetchBody
             });
-            
+
+            // Check HTTP response status
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API请求失败 (${response.status}): ${errorText || response.statusText}`);
+            }
+
             const data = await response.json();
-            console.log(data);
-            let botReply = (modelConfig && modelConfig.type === 'custom') ? data.choices[0].message.content : data.textResponse;
+            console.log('API响应:', data);
+
+            let botReply;
+
+            if (isCustom) {
+                // 支持多种API响应格式
+                // OpenAI格式: data.choices[0].message.content
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    botReply = data.choices[0].message.content;
+                }
+                // Claude格式: data.content[0].text
+                else if (data.content && data.content[0] && data.content[0].text) {
+                    botReply = data.content[0].text;
+                }
+                // 通用格式: data.reply, data.response, data.answer, data.text
+                else if (data.reply) {
+                    botReply = data.reply;
+                } else if (data.response) {
+                    botReply = data.response;
+                } else if (data.answer) {
+                    botReply = data.answer;
+                } else if (data.text) {
+                    botReply = data.text;
+                } else if (typeof data === 'string') {
+                    botReply = data;
+                } else {
+                    throw new Error('无法解析API响应，请检查API返回格式是否正确');
+                }
+            } else {
+                // AnythingLLM默认格式
+                botReply = data.textResponse;
+            }
+
+            if (!botReply) {
+                throw new Error('API返回为空，请检查API配置');
+            }
 
             loadingDiv.remove();
             addMessageToChat("Assistant", botReply, "left");
 
+            // 保存AI回复到数据库
             const response2 = await fetch('http://10.100.1.122:5000/api/save_chat', {
                 method: 'POST',
                 headers: {
@@ -798,10 +1063,10 @@ function initializeApp(user_id) {
                     sender: 'ai'
                 })
             });
-    
+
             if (!response2.ok) {
-                throw new Error('存储AI消息失败');
-            }           
+                console.error('存储AI消息失败');
+            }
 
         } catch (error) {
             console.error('发送消息失败:', error);
@@ -898,29 +1163,39 @@ GPU 队列信息:
         }
     }
 
-    function addMessageToChat(sender, text, position) {
+    function addMessageToChat(sender, text, position, isHTML = false) {
         const messageDiv = document.createElement("div");
         messageDiv.className = `chat-message ${position}`;
-    
+
         const messageContent = document.createElement("div");
         messageContent.className = "message-content";
 
-        const rawHtml = marked.parse(text);
-        const cleanHtml = DOMPurify.sanitize(rawHtml, {
-            ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'br'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class']
-        });
-    
+        let cleanHtml;
+        if (isHTML) {
+            // 直接使用 HTML，跳过 markdown 解析
+            cleanHtml = DOMPurify.sanitize(text, {
+                ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'br', 'div', 'span', 'style'],
+                ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'onclick', 'type', 'target', 'rel']
+            });
+        } else {
+            // Markdown 解析
+            const rawHtml = marked.parse(text);
+            cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'br'],
+                ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel']
+            });
+        }
+
         messageContent.innerHTML = cleanHtml;
         messageDiv.appendChild(messageContent);
-    
+
         const chatHistoryElement = document.getElementById('chatContent');
         chatHistoryElement.appendChild(messageDiv);
-    
+
         messageDiv.querySelectorAll('pre code').forEach(block => {
             hljs.highlightElement(block);
         });
-    
+
         chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
     }
 

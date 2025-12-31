@@ -1,4 +1,4 @@
-/* --- 全局与根变量 (从 popup.css 继承) --- */
+/* --- 全局与根变量 --- */
 :root {
     --bg-color: #f0f2f5;
     --sidebar-bg: #ffffff;
@@ -12,6 +12,11 @@
     --border-radius-lg: 18px;
     --border-radius-md: 12px;
     --border-radius-sm: 8px;
+
+    /* 图谱节点颜色 */
+    --node-user-color: #ff6347;
+    --node-paper-color: #4682b4;
+    --node-topic-color: #32cd32;
 }
 
 /* --- 基础布局 --- */
@@ -38,7 +43,7 @@ body {
 }
 
 /* --- 页面头部 --- */
-.header {
+.page-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -48,64 +53,208 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.header h1 {
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.page-header h1 {
     margin: 0;
     font-size: 20px;
     font-weight: 600;
 }
 
-.search-container {
+.btn-back {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
 }
 
-#searchInput {
-    padding: 10px 16px;
+.btn-back:hover {
+    background: #e0e0e0;
+}
+
+/* --- 搜索栏 --- */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--sidebar-bg);
+    padding: 12px 16px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.search-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.search-input-wrapper input {
+    width: 100%;
+    padding: 10px 16px 10px 40px;
     border: none;
     border-radius: var(--border-radius-md);
     font-size: 14px;
     background-color: var(--input-bg);
-    width: 250px;
+    box-sizing: border-box;
 }
-#searchInput:focus {
+
+.search-input-wrapper input:focus {
     outline: 2px solid var(--primary-color);
+    background-color: #fff;
 }
 
 .btn {
-    padding: 10px 20px;
+    padding: 10px 18px;
     border-radius: var(--border-radius-md);
     font-weight: 500;
     border: none;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn.primary {
     background: var(--primary-color);
     color: white;
 }
+
 .btn.primary:hover {
     background: var(--primary-hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
 }
 
-.btn.secondary {
-    background: var(--input-bg);
-    color: var(--text-primary);
-}
-.btn.secondary:hover {
-    background: #e0e0e0;
+.btn.primary:active {
+    transform: translateY(0);
 }
 
-/* --- 关系图容器 --- */
+/* --- 图谱容器 --- */
+.graph-container {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+}
+
 #mynetwork {
-    flex-grow: 1;
+    flex: 1;
     border-radius: var(--border-radius-lg);
     background-color: var(--sidebar-bg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    position: relative; /* For loading overlay */
+    position: relative;
+}
+
+/* --- 图谱控制面板 --- */
+.graph-controls {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.control-panel {
+    background: var(--sidebar-bg);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.control-panel h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- 图例 --- */
+.legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.legend-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legend-icon.user {
+    background-color: var(--node-user-color);
+}
+
+.legend-icon.paper {
+    background-color: var(--node-paper-color);
+}
+
+.legend-icon.topic {
+    background-color: var(--node-topic-color);
+}
+
+/* --- 操作提示 --- */
+.tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tips-list li {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tips-list li:last-child {
+    border-bottom: none;
+}
+
+.tips-list li:before {
+    content: "•";
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-right: 8px;
 }
 
 /* --- 加载覆盖层 --- */
@@ -115,16 +264,19 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     flex-direction: column;
     gap: 16px;
-    color: var(--text-secondary);
-    font-size: 16px;
-    font-weight: 500;
+}
+
+#loadingOverlay[style*="display: none"],
+#loadingOverlay[style*="display:none"] {
+    display: none !important;
 }
 
 .spinner {
@@ -136,7 +288,31 @@ body {
     animation: spin 1s linear infinite;
 }
 
+#loadingText {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* --- 滚动条样式 --- */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
 }

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchButton = document.getElementById('searchButton');
     const backButton = document.getElementById('backButton');
     const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
 
     // --- 后端 API ---
     const GRAPH_API_URL = 'http://10.100.1.122:5002';
@@ -14,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const nodes = new vis.DataSet([]);
     const edges = new vis.DataSet([]);
     const data = { nodes, edges };
-    const options = getGraphOptions(); // 使用函数获取配置，保持整洁
+    const options = getGraphOptions();
     const network = new vis.Network(container, data, options);
 
     // --- 事件监听 ---
@@ -36,17 +37,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // =================================================================
 
     /**
-     * 初始化应用，加载图谱并搜索当前用户
+     * 初始化应用，加载图谱
      */
     async function initializeApp() {
-        showLoading('正在初始化图谱...');
+        showLoading('正在加载图谱...');
         try {
             await loadInitialGraph();
-            const realName = await getRealName();
-            if (realName) {
-                showLoading(`正在定位用户: ${realName}`);
-                await performSearch(realName, false);
-            }
         } catch (error) {
             console.error("初始化失败:", error);
             showError("初始化图谱失败，请稍后重试。");
@@ -62,14 +58,30 @@ document.addEventListener('DOMContentLoaded', function () {
         const graphData = await fetchApi(`${GRAPH_API_URL}/initial_graph`);
         nodes.clear();
         edges.clear();
-        nodes.add(graphData.nodes);
+
+        // 确保节点有正确的 group 属性
+        const processedNodes = graphData.nodes.map(node => {
+            // 如果节点没有 group，根据 ID 或其他属性推断
+            if (!node.group && node.id) {
+                const id = String(node.id).toLowerCase();
+                if (id.includes('user') || id.includes('author') || /^\d+$/.test(node.id)) {
+                    node.group = 'user';
+                } else if (id.includes('paper') || id.includes('pub')) {
+                    node.group = 'paper';
+                } else {
+                    node.group = 'topic';
+                }
+            }
+            return node;
+        });
+
+        nodes.add(processedNodes);
         edges.add(graphData.edges);
         network.fit();
     }
 
     /**
      * 处理节点点击事件，展开节点
-     * @param {object} params - vis.js 点击事件参数
      */
     async function handleNodeClick(params) {
         if (params.nodes.length > 0) {
@@ -77,33 +89,51 @@ document.addEventListener('DOMContentLoaded', function () {
             showLoading('正在展开节点...');
             try {
                 const newGraphData = await fetchApi(`${GRAPH_API_URL}/expand_node?node_id=${nodeId}`);
-                nodes.add(newGraphData.nodes);
+
+                // 处理新节点的 group
+                const processedNodes = newGraphData.nodes.map(node => {
+                    if (!node.group && node.id) {
+                        const id = String(node.id).toLowerCase();
+                        if (id.includes('user') || id.includes('author') || /^\d+$/.test(node.id)) {
+                            node.group = 'user';
+                        } else if (id.includes('paper') || id.includes('pub')) {
+                            node.group = 'paper';
+                        } else {
+                            node.group = 'topic';
+                        }
+                    }
+                    return node;
+                });
+
+                nodes.add(processedNodes);
                 edges.add(newGraphData.edges);
             } catch (error) {
                 console.error(`展开节点 ${nodeId} 失败:`, error);
-                // 这里可以选择不弹窗，避免打断用户操作
             } finally {
                 hideLoading();
             }
         }
     }
-    
+
     /**
      * 处理节点双击事件
-     * @param {object} params - vis.js 双击事件参数
      */
     function handleNodeDoubleClick(params) {
         if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
             const nodeData = nodes.get(nodeId);
-            alert(`节点信息:\nID: ${nodeData.id}\n标签: ${nodeData.label}\n类型: ${nodeData.group || '未知'}`);
+            const groupLabels = {
+                user: '研究者',
+                paper: '论文',
+                topic: '主题'
+            };
+            const groupLabel = groupLabels[nodeData.group] || nodeData.group || '未知';
+            alert(`节点信息:\nID: ${nodeData.id}\n标签: ${nodeData.label}\n类型: ${groupLabel}`);
         }
     }
 
     /**
      * 执行搜索
-     * @param {string} query - 搜索关键词
-     * @param {boolean} showAlert - 未找到时是否弹窗提示
      */
     async function performSearch(query, showAlert) {
         if (!query) {
@@ -113,11 +143,27 @@ document.addEventListener('DOMContentLoaded', function () {
         showLoading(`正在搜索 "${query}"...`);
         try {
             const searchResults = await fetchApi(`${GRAPH_API_URL}/search_node?query=${encodeURIComponent(query)}`);
-            if (searchResults.nodes.length > 0) {
-                nodes.update(searchResults.nodes);
+
+            // 处理搜索结果的节点 group
+            const processedNodes = searchResults.nodes.map(node => {
+                if (!node.group && node.id) {
+                    const id = String(node.id).toLowerCase();
+                    if (id.includes('user') || id.includes('author') || /^\d+$/.test(node.id)) {
+                        node.group = 'user';
+                    } else if (id.includes('paper') || id.includes('pub')) {
+                        node.group = 'paper';
+                    } else {
+                        node.group = 'topic';
+                    }
+                }
+                return node;
+            });
+
+            if (processedNodes.length > 0) {
+                nodes.update(processedNodes);
                 edges.update(searchResults.edges);
-                network.focus(searchResults.nodes[0].id, { scale: 1.5, animation: true });
-                network.selectNodes([searchResults.nodes[0].id]);
+                network.focus(processedNodes[0].id, { scale: 1.5, animation: true });
+                network.selectNodes([processedNodes[0].id]);
             } else if (showAlert) {
                 alert("未找到匹配的节点。");
             }
@@ -130,46 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-     * 从 Chrome 存储中获取用户ID
-     * @returns {Promise<string|null>}
-     */
-    function getUserId() {
-        return new Promise((resolve, reject) => {
-            chrome.storage.local.get('user_id', (data) => {
-                if (chrome.runtime.lastError) {
-                    return reject(chrome.runtime.lastError);
-                }
-                resolve(data.user_id || null);
-            });
-        });
-    }
-
-    /**
-     * 获取用户真实姓名
-     * @returns {Promise<string|null>}
-     */
-    async function getRealName() {
-        const userId = await getUserId();
-        if (!userId) return null;
-
-        try {
-            const data = await fetchApi(AUTH_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId, real_name: "" })
-            });
-            return data.user?.relname || null;
-        } catch (error) {
-            console.error("验证真实姓名失败:", error);
-            return null;
-        }
-    }
-
-    /**
      * 封装的 fetch 请求
-     * @param {string} url - 请求URL
-     * @param {object} options - fetch 请求选项
-     * @returns {Promise<object>} - 解析后的 JSON 数据
      */
     async function fetchApi(url, options) {
         const response = await fetch(url, options);
@@ -181,114 +188,148 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- UI 辅助函数 ---
     function showLoading(message) {
-        loadingOverlay.querySelector('span').textContent = message;
+        if (loadingText) loadingText.textContent = message;
         loadingOverlay.style.display = 'flex';
     }
 
     function hideLoading() {
         loadingOverlay.style.display = 'none';
     }
-    
+
     function showError(message) {
-        const networkContainer = document.getElementById('mynetwork');
-        networkContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: red;">${message}</div>`;
+        container.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--error-color, #ff3b30); font-weight: 500;">${message}</div>`;
     }
 
     /**
      * 获取 vis.js 的配置选项
-     * @returns {object}
      */
     function getGraphOptions() {
         return {
             nodes: {
-                shape: 'icon',
-                icon: {
-                    face: "'Font Awesome 5 Free'",
-                    weight: "900", // Font Awesome 5 Free solid style
-                    code: '\uf0c0', // fa-users
-                    size: 50,
-                    color: 'var(--primary-color)'
-                },
-                shapeProperties: {
-                    borderRadius: 10
-                },
+                shape: 'dot',
+                size: 25,
                 font: {
-                    size: 16,
+                    size: 14,
                     color: '#343434',
-                    strokeWidth: 0.5,
+                    strokeWidth: 3,
                     strokeColor: '#ffffff'
                 },
-                borderWidth: 3,
+                borderWidth: 2,
+                borderWidthSelected: 3,
                 shadow: {
                     enabled: true,
-                    color: 'rgba(0,0,0,0.2)',
-                    size: 7,
-                    x: 3,
-                    y: 3
-                },
-                color: {
-                    border: 'var(--primary-color)',
-                    background: '#ffffff',
-                    highlight: {
-                        border: 'var(--primary-hover-color)',
-                        background: '#f0f8ff'
-                    },
-                    hover: {
-                        border: 'var(--primary-hover-color)',
-                        background: '#f0f8ff'
-                    }
+                    color: 'rgba(0,0,0,0.15)',
+                    size: 8,
+                    x: 2,
+                    y: 2
                 }
             },
             edges: {
                 width: 2,
                 color: {
-                    color: '#cccccc',
-                    highlight: 'var(--primary-color)',
-                    hover: 'var(--primary-color)',
-                    inherit: false
+                    color: '#c5c5c5',
+                    highlight: '#007aff',
+                    hover: '#007aff'
                 },
                 arrows: {
-                    to: { enabled: true, scaleFactor: 0.7 }
+                    to: { enabled: true, scaleFactor: 0.6 }
                 },
                 smooth: {
                     enabled: true,
-                    type: "dynamic",
-                    roundness: 0.5
+                    type: "continuous",
+                    roundness: 0.3
                 }
             },
             physics: {
                 enabled: true,
-                forceAtlas2Based: {
-                    gravitationalConstant: -50,
-                    centralGravity: 0.01,
-                    springConstant: 0.08,
-                    springLength: 100,
-                    damping: 0.4,
-                    avoidOverlap: 1
+                barnesHut: {
+                    gravitationalConstant: -3000,
+                    centralGravity: 0.3,
+                    springLength: 120,
+                    springConstant: 0.04,
+                    damping: 0.09,
+                    avoidOverlap: 0.2
                 },
-                solver: 'forceAtlas2Based'
+                solver: 'barnesHut',
+                stabilization: {
+                    iterations: 200
+                }
             },
             interaction: {
                 hover: true,
-                navigationButtons: false,
-                tooltipDelay: 200,
+                tooltipDelay: 150,
                 dragNodes: true,
                 dragView: true,
                 zoomView: true
             },
             groups: {
-                // 定义不同类型的节点样式
+                // 研究者 - 红色系
                 user: {
-                    icon: { code: '\uf007', color: '#ff6347' } // fa-user (Tomato)
+                    color: {
+                        background: '#ff6347',
+                        border: '#e5533d',
+                        highlight: {
+                            background: '#ff7868',
+                            border: '#ff6347'
+                        },
+                        hover: {
+                            background: '#ff7868',
+                            border: '#ff6347'
+                        }
+                    },
+                    shape: 'dot',
+                    size: 30
                 },
+                // 论文 - 蓝色系
                 paper: {
-                    icon: { code: '\uf15c', color: '#4682b4' } // fa-file-alt (SteelBlue)
+                    color: {
+                        background: '#4682b4',
+                        border: '#3a6fa3',
+                        highlight: {
+                            background: '#5a94c4',
+                            border: '#4682b4'
+                        },
+                        hover: {
+                            background: '#5a94c4',
+                            border: '#4682b4'
+                        }
+                    },
+                    shape: 'dot',
+                    size: 25
                 },
+                // 主题 - 绿色系
                 topic: {
-                    icon: { code: '\uf07b', color: '#32cd32' } // fa-folder (LimeGreen)
+                    color: {
+                        background: '#32cd32',
+                        border: '#2bb82b',
+                        highlight: {
+                            background: '#42d942',
+                            border: '#32cd32'
+                        },
+                        hover: {
+                            background: '#42d942',
+                            border: '#32cd32'
+                        }
+                    },
+                    shape: 'dot',
+                    size: 28
                 },
+                // 默认 - 灰色系
                 default: {
-                     icon: { code: '\uf128', color: '#6e6e73' } // fa-question
+                    color: {
+                        background: '#6e6e73',
+                        border: '#5a5a5f',
+                        highlight: {
+                            background: '#7e7e83',
+                            border: '#6e6e73'
+                        },
+                        hover: {
+                            background: '#7e7e83',
+                            border: '#6e6e73'
+                        }
+                    },
+                    shape: 'dot',
+                    size: 20
                 }
             }
         };

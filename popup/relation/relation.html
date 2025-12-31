@@ -5,27 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>知识图谱</title>
     <link rel="stylesheet" href="relation.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>知识图谱</h1>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="搜索节点...">
-                <button id="searchButton" class="btn primary">搜索</button>
-                <button id="backButton" class="btn secondary">返回</button>
+        <!-- 页面头部 -->
+        <div class="page-header">
+            <div class="header-title">
+                <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <h1>知识图谱</h1>
             </div>
+            <button id="backButton" class="btn-back">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                返回
+            </button>
         </div>
-        <div id="mynetwork">
-            <div id="loadingOverlay">
-                <div class="spinner"></div>
-                <span>正在加载图谱...</span>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <div class="search-input-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" placeholder="搜索研究者、论文或主题...">
+            </div>
+            <button id="searchButton" class="btn primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                搜索
+            </button>
+        </div>
+
+        <!-- 图谱容器 -->
+        <div class="graph-container">
+            <div id="mynetwork">
+                <div id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <span id="loadingText">正在加载图谱...</span>
+                </div>
+            </div>
+
+            <!-- 图谱控制面板 -->
+            <div class="graph-controls">
+                <div class="control-panel">
+                    <h3>图例</h3>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-icon user"></span>
+                            <span>研究者</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon paper"></span>
+                            <span>论文</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon topic"></span>
+                            <span>主题</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <h3>操作提示</h3>
+                    <ul class="tips-list">
+                        <li>单击节点：展开关联</li>
+                        <li>双击节点：查看详情</li>
+                        <li>滚轮：缩放视图</li>
+                        <li>拖拽：移动节点或画布</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="text/javascript" src="../../lib/vis-network.min.js"></script>
-    <script type="text/javascript" src="relation.js"></script>
+    <script type="module" src="relation.js"></script>
 </body>
 </html>
