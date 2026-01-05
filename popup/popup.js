@@ -579,32 +579,172 @@ function initializeApp(user_id) {
 
     let chatHistory = [];
 
-    async function loadUserChats() {
-        console.log("获取对话列表是的 ID:", user_id);
+    // 时间格式化工具函数：将后端时间（默认 UTC）转换为本地显示
+    function formatLocalDate(isoString) {
+        if (!isoString) return '';
+        const normalized = isoString.includes('T') ? isoString : isoString.replace(' ', 'T');
+        const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
+        const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
+        if (Number.isNaN(date.getTime())) {
+            return isoString;
+        }
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    async function loadUserChats(options = {}) {
+        const { keepActiveId = null, autoSelect = true } = options;
+        console.log("获取对话列表的 user_id:", user_id);
+        console.log("user_id 类型:", typeof user_id);
+        console.log("user_id 长度:", user_id ? user_id.length : 'null/undefined');
+
+        if (!user_id) {
+            console.error("user_id 为空，无法加载对话列表");
+            const chatListElement = document.getElementById('chatList');
+            if (chatListElement) {
+                chatListElement.innerHTML = `
+                    <li style="padding: 12px; color: #ff3b30; text-align: center;">
+                        未登录，请先登录
+                    </li>
+                `;
+            }
+            return;
+        }
+
+        const chatListElement = document.getElementById('chatList');
+
         try {
-            const response = await fetch(`http://10.100.1.122:5000/api/get_chats?user_id=${user_id}`);
+            const url = `http://10.100.1.122:5000/api/get_chats?user_id=${encodeURIComponent(user_id)}`;
+            console.log("请求URL:", url);
+
+            const response = await fetch(url);
+            console.log("响应状态:", response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("HTTP错误:", response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
             const data = await response.json();
-            console.log("获取的对话列表", data);
-            if (data.success) {
-                chatHistory = data.chats.map(chat => ({
+            console.log("获取的对话列表数据:", data);
+
+            if (!data.success) {
+                throw new Error(data.message || '获取对话列表失败');
+            }
+
+            if (!data.chats || !Array.isArray(data.chats)) {
+                throw new Error('返回数据格式错误：chats 不是数组');
+            }
+
+            chatHistory = data.chats.map(chat => {
+                return {
                     id: chat.chat_id,
                     title: chat.title,
-                    time: new Date(chat.created_at).toLocaleString(),
+                    time: formatLocalDate(chat.created_at),
+                    created_at: chat.created_at, // 保存原始时间戳
                     content: []
-                }));
-                renderChatList();
+                };
+            });
+
+            console.log("格式化后的对话列表:", chatHistory);
+
+            // 按时间倒序排列（最新的在前面）
+            chatHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            // 渲染对话列表
+            renderChatList(keepActiveId);
+
+            if (autoSelect) {
+                const preferredChat = keepActiveId
+                    ? chatHistory.find(chat => chat.id === keepActiveId)
+                    : null;
+                const targetChat = preferredChat || chatHistory[0];
+                if (targetChat) {
+                    console.log("自动加载对话:", targetChat.id);
+                    const targetChatItem = document.querySelector(`[data-id="${targetChat.id}"]`);
+                    if (targetChatItem) {
+                        targetChatItem.classList.add('active');
+                    }
+                    await loadChatHistory(targetChat.id);
+                } else {
+                    console.log("没有历史对话，显示欢迎消息");
+                    const chatContentContainer = document.getElementById('chatContent');
+                    chatContentContainer.innerHTML = `
+                        <div id="welcomeMessage" class="welcome-message">
+                            <h2>欢迎使用智能任务助手</h2>
+                            <p>点击左侧"新建对话"按钮开始您的第一个对话。</p>
+                        </div>
+                    `;
+                }
             }
-            console.log("获取的对话列表格式化之后", chatHistory);
         } catch (error) {
             console.error("加载对话列表失败:", error);
+
+            // 检查是否是"用户不存在"错误
+            const errorMessage = error.message || '';
+            if (errorMessage.includes('用户不存在') || errorMessage.includes('HTTP 404')) {
+                console.warn("用户在数据库中不存在，可能需要重新登录");
+
+                // 显示友好的错误提示，并提供解决方案
+                if (chatListElement) {
+                    chatListElement.innerHTML = `
+                        <li style="padding: 16px; color: #ff3b30; text-align: center; line-height: 1.6;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ 用户数据丢失</div>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 12px;">
+                                您的账户可能在服务器重启后被清除<br>
+                                （后端数据库每次重启会重置）
+                            </div>
+                            <button id="reloginBtn" style="
+                                padding: 8px 16px;
+                                background: #007aff;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                            ">
+                                重新登录
+                            </button>
+                        </li>
+                    `;
+
+                    // 添加重新登录按钮事件
+                    setTimeout(() => {
+                        const reloginBtn = document.getElementById('reloginBtn');
+                        if (reloginBtn) {
+                            reloginBtn.addEventListener('click', () => {
+                                chrome.storage.local.remove('user_id', () => {
+                                    console.log("清除本地用户ID，跳转到登录页面");
+                                    window.location.href = "login/login.html";
+                                });
+                            });
+                        }
+                    }, 100);
+                }
+            } else {
+                // 其他错误的通用提示
+                if (chatListElement) {
+                    chatListElement.innerHTML = `
+                        <li style="padding: 12px; color: #ff3b30; text-align: center;">
+                            加载失败: ${error.message}
+                        </li>
+                    `;
+                }
+            }
         }
     }
     loadUserChats();
 
-    function renderChatList() {
+    function renderChatList(keepActiveId = null) {
         const chatList = document.getElementById('chatList');
         chatList.innerHTML = chatHistory.map(chat => `
-            <li class="chat-item" data-id="${chat.id}">
+            <li class="chat-item${keepActiveId && chat.id === keepActiveId ? ' active' : ''}" data-id="${chat.id}">
                 <div class="chat-content">
                     <div class="chat-title">${chat.title}</div>
                     <div class="chat-time">${chat.time}</div>
@@ -654,25 +794,23 @@ function initializeApp(user_id) {
                 throw new Error("无效的对话ID响应");
             }
 
+            const now = new Date();
+            const created_at = now.toISOString();
+
             const newChat = {
                 id: data.chat_id,
                 title: newChatTitle,
-                time: new Date().toLocaleString(),
+                time: formatLocalDate(created_at),
+                created_at: created_at,
                 content: []
             };
             chatHistory.unshift(newChat);
-            renderChatList();
-            
-            // 移除所有 active 类
-            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-            
-            // 为新对话添加 active 类
-            const newChatItem = document.querySelector(`[data-id="${newChat.id}"]`);
-            if (newChatItem) {
-                newChatItem.classList.add('active');
-            }
-            
-            await loadChatHistory(newChat.id);
+            renderChatList(newChat.id);
+
+            // 清空聊天区域并准备接收新消息（不显示欢迎消息）
+            const chatContentContainer = document.getElementById('chatContent');
+            chatContentContainer.innerHTML = '';
+
             return newChat.id;
 
         } catch (error) {
@@ -828,37 +966,146 @@ function initializeApp(user_id) {
         }
     });
 
-    async function loadChatHistory(chatId) {
-        console.log("加载历史对话时获取的对话ID", chatId);
-        try {
-            const response = await fetch(
-                `http://10.100.1.122:5000/api/get_chat?user_id=${user_id}&chat_id=${chatId}`,
-                { method: 'GET' }
-            );
-            const data = await response.json();
-            console.log("获取的对话内容", data);
-            
-            if (data.success && data.messages) {
-                const chatContentContainer = document.getElementById('chatContent');
-                chatContentContainer.innerHTML = '';
+    // 论文推荐按钮
+    const paperRecommendBtn = document.getElementById('paperRecommendBtn');
+    if (paperRecommendBtn) {
+        paperRecommendBtn.addEventListener('click', showRecommendations);
+    }
 
-                if (data.messages.length === 0) {
-                    const welcomeMessage = document.getElementById("welcomeMessage");
-                    if(welcomeMessage) chatContentContainer.appendChild(welcomeMessage);
-                } else {
-                    const targetChat = chatHistory.find(chat => chat.id === chatId);
-                    if (targetChat) {
-                        targetChat.content = data.messages;
-                    }
-                    data.messages.forEach(msg => {
-                        const sender = msg.sender === 'user' ? "You" : "Assistant";
-                        const position = msg.sender === 'user' ? "right" : "left";
-                        addMessageToChat(sender, msg.content, position);
-                    });
-                }
+    async function loadChatHistory(chatId) {
+        console.log("加载历史对话 - chat_id:", chatId, ", user_id:", user_id);
+        const chatContentContainer = document.getElementById('chatContent');
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 增加到30秒
+
+            const url = `http://10.100.1.122:5000/api/get_chat?user_id=${encodeURIComponent(user_id)}&chat_id=${encodeURIComponent(chatId)}`;
+            console.log("请求URL:", url);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            console.log("响应状态:", response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("HTTP错误:", response.status, errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
+
+            const data = await response.json();
+            console.log("获取的对话内容数据:", data);
+
+            if (!data.success) {
+                throw new Error(data.message || '获取对话失败');
+            }
+
+            if (!data.messages || !Array.isArray(data.messages)) {
+                throw new Error('返回数据格式错误：messages 不是数组');
+            }
+
+            console.log("消息数量:", data.messages.length);
+
+            // 完全清空容器
+            chatContentContainer.innerHTML = '';
+
+            // 如果没有消息，显示欢迎消息
+            if (data.messages.length === 0) {
+                console.log("对话为空，显示欢迎消息");
+                // 重新创建欢迎消息
+                const welcomeDiv = document.createElement('div');
+                welcomeDiv.id = 'welcomeMessage';
+                welcomeDiv.className = 'welcome-message';
+                welcomeDiv.innerHTML = `
+                    <h2>欢迎使用智能任务助手</h2>
+                    <p>这是您的新对话，请输入消息开始交流。</p>
+                `;
+                chatContentContainer.appendChild(welcomeDiv);
+            } else {
+                // 更新本地缓存
+                const targetChat = chatHistory.find(chat => chat.id === chatId);
+                if (targetChat) {
+                    targetChat.content = data.messages;
+                }
+
+                // 渲染所有历史消息
+                data.messages.forEach(msg => {
+                    const sender = msg.sender === 'user' ? "You" : "Assistant";
+                    const position = msg.sender === 'user' ? "right" : "left";
+                    console.log("渲染消息:", sender, position, msg.content.substring(0, 50) + "...");
+                    addMessageToChat(sender, msg.content, position);
+                });
+            }
+
+            // 滚动到底部
+            chatContentContainer.scrollTop = chatContentContainer.scrollHeight;
+            console.log("对话加载完成");
+
         } catch (error) {
             console.error("加载对话内容失败:", error);
+
+            // 清空容器并显示友好的错误消息
+            chatContentContainer.innerHTML = '';
+
+            const errorMessage = error.message || '';
+
+            // 检查是否是"用户不存在"错误
+            if (errorMessage.includes('用户不存在') || errorMessage.includes('HTTP 404')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'welcome-message';
+                errorDiv.innerHTML = `
+                    <h2>⚠️ 用户数据丢失</h2>
+                    <p>您的账户可能在服务器重启后被清除。</p>
+                    <p style="font-size: 13px; color: #666; margin-top: 12px;">
+                        原因：后端数据库每次重启会重置所有数据
+                    </p>
+                    <button id="reloginBtnMain" style="
+                        padding: 10px 20px;
+                        background: #007aff;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        margin-top: 12px;
+                    ">
+                        重新登录
+                    </button>
+                `;
+                chatContentContainer.appendChild(errorDiv);
+
+                // 添加重新登录按钮事件
+                setTimeout(() => {
+                    const reloginBtn = document.getElementById('reloginBtnMain');
+                    if (reloginBtn) {
+                        reloginBtn.addEventListener('click', () => {
+                            chrome.storage.local.remove('user_id', () => {
+                                console.log("清除本地用户ID，跳转到登录页面");
+                                window.location.href = "login/login.html";
+                            });
+                        });
+                    }
+                }, 100);
+            } else {
+                // 其他错误的通用提示
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'welcome-message';
+                errorDiv.innerHTML = `
+                    <h2>⚠️ 加载对话失败</h2>
+                    <p>无法加载对话内容，但这不影响您发送新消息。</p>
+                    <p style="font-size: 13px; color: #666; margin-top: 12px;">
+                        ${error.name === 'AbortError' ? '请求超时，请检查网络连接' : error.message}
+                    </p>
+                    <p style="font-size: 13px; color: #666; margin-top: 8px;">
+                        请尝试：刷新页面、检查网络、或选择其他对话
+                    </p>
+                `;
+                chatContentContainer.appendChild(errorDiv);
+            }
         }
     }
 
@@ -896,77 +1143,170 @@ function initializeApp(user_id) {
         if (!currentChatItem) {
             const newChatId = await createNewChat();
             if (!newChatId) {
-                console.error("创建新对话失败");
+                addMessageToChat("System", "创建新对话失败，请刷新页面重试", "left");
                 return;
             }
             currentChatItem = document.querySelector('.chat-item.active');
+            if (!currentChatItem) {
+                addMessageToChat("System", "无法获取当前对话，请刷新页面", "left");
+                return;
+            }
         }
 
         const chat_id = currentChatItem.dataset.id;
         const currentChat = chatHistory.find(chat => chat.id === chat_id);
         const isFirstMessage = currentChat ? currentChat.content.length === 0 : false;
 
+        // 如果是第一条消息，移除欢迎消息（如果存在）
+        if (isFirstMessage) {
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+        }
+
         addMessageToChat("You", messageText, "right");
 
+        // 创建改进的加载指示器
         const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'chat-message left';
-        loadingDiv.innerHTML = '<div class="message-content"><div class="loading">思考中...</div></div>';
+        loadingDiv.className = 'chat-message left loading-message';
+        loadingDiv.innerHTML = `
+            <div class="message-content">
+                <div class="loading-indicator">
+                    <div class="loading-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span class="loading-text">正在思考...</span>
+                </div>
+            </div>
+        `;
         const chatContentContainer = document.getElementById('chatContent');
         chatContentContainer.appendChild(loadingDiv);
+        chatContentContainer.scrollTop = chatContentContainer.scrollHeight;
 
         try {
-            const response = await fetch('http://10.100.1.122:5000/api/save_chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    message: messageText,
-                    chat_id: chat_id,
-                    sender: 'user'
-                })
+            // 添加超时的fetch包装函数
+            const fetchWithTimeout = async (url, options, timeout = 30000) => {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(id);
+                    return response;
+                } catch (error) {
+                    clearTimeout(id);
+                    if (error.name === 'AbortError') {
+                        throw new Error('请求超时（30秒），请检查网络连接或稍后重试');
+                    }
+                    throw error;
+                }
+            };
+
+            // 保存用户消息（不阻塞主流程，失败也继续）
+            fetchWithTimeout(
+                'http://10.100.1.122:5000/api/save_chat',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: user_id,
+                        message: messageText,
+                        chat_id: chat_id,
+                        sender: 'user'
+                    })
+                },
+                30000 // 30秒超时
+            ).then(response => {
+                if (!response.ok) {
+                    console.error('存储消息失败:', response.status);
+                }
+            }).catch(saveError => {
+                console.error('存储消息失败，但继续发送:', saveError);
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`存储消息失败: ${errorData.message}`);
-            }
-
             if (isFirstMessage) {
-                // 重新加载对话列表以更新标题
-                await loadUserChats();
+                // 异步更新对话列表，不打断当前会话内容
+                loadUserChats({ keepActiveId: chat_id, autoSelect: false }).catch(err => {
+                    console.error('更新对话列表失败，但不影响主流程:', err);
+                });
             }
 
             let prompt = "";
             if (currentMode === 'resource') {
-                prompt = await updateSystemLoad(messageText)
+                prompt = await updateSystemLoad(messageText);
             } else if(currentMode === 'document'){
                 prompt = `
                 你是一个专业的AI助手，你的任务是根据用户的问题去本地的向量数据库寻找问题的答案，
-                如果没有对应的解答则返回“知识库中并没有问题的答案，但是根据训练时的数据，该问题可以”，然后根据你自己的了解去回答该问题。
+                如果没有对应的解答则返回"知识库中并没有问题的答案，但是根据训练时的数据，该问题可以"，然后根据你自己的了解去回答该问题。
                 用户的问题是： ${messageText}
                  `;
-            }else if(currentMode === 'image'){
+            } else if(currentMode === 'image'){
                 prompt = `
                 现在给你的字符是从图片中识别的文字，请根据识别到的文字信息回答问题。
                 图片信息是：${ocrTextResult}
                 用户的问题是： ${messageText} `;
                 currentMode = 'resource';
                 updateModeDisplay();
-            }else{
-             prompt=`你是一个协助科研的大模型`;
+            } else {
+                prompt = `你是一个协助科研的大模型。用户的问题是：${messageText}`;
             }
 
             console.log("当前模式===>", currentMode);
             console.log("当前模式下的prompt===>", prompt);
-            chat(prompt, loadingDiv, chat_id);
+            await chat(prompt, loadingDiv, chat_id, currentChatItem);
         } catch (error) {
             console.error('发送消息失败:', error);
             loadingDiv.remove();
-            addMessageToChat("System", `错误：${error.message}`, "left");
+
+            // 提供更详细的错误信息
+            let errorMessage = error.message;
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                errorMessage = '网络连接失败，请检查网络设置或服务器是否运行';
+            } else if (error.message.includes('timeout') || error.message.includes('超时')) {
+                errorMessage = error.message;
+            }
+
+            addMessageToChat("System", `
+                <div style="background: #fff3cd; border-left: 4px solid #ff9500; padding: 12px; border-radius: 8px;">
+                    <p><strong>⚠️ 发送失败</strong></p>
+                    <p style="margin: 8px 0; color: #666;">${errorMessage}</p>
+                    <p style="margin: 8px 0; color: #666; font-size: 13px;">建议：</p>
+                    <ul style="margin: 4px 0; padding-left: 20px; color: #666; font-size: 13px;">
+                        <li>检查网络连接</li>
+                        <li>检查服务器是否运行</li>
+                        <li>稍后重试</li>
+                    </ul>
+                </div>
+            `, "left", true);
         }
     }
 
-    async function chat(params, loadingDiv, chat_id) {
+    async function chat(params, loadingDiv, chat_id, currentChatItem) {
+        const startTime = Date.now();
+        let lastUpdateTime = startTime;
+
+        // 更新加载指示器的时间
+        const updateLoadingTime = () => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const loadingText = loadingDiv.querySelector('.loading-text');
+            if (loadingText) {
+                if (elapsed < 5) {
+                    loadingText.textContent = '正在思考...';
+                } else if (elapsed < 15) {
+                    loadingText.textContent = `正在思考... (${elapsed}秒)`;
+                } else if (elapsed < 30) {
+                    loadingText.textContent = `响应较慢... (${elapsed}秒)`;
+                } else {
+                    loadingText.textContent = `等待响应... (${elapsed}秒)`;
+                }
+            }
+        };
+
+        const loadingTimer = setInterval(updateLoadingTime, 1000);
+
         try {
             const modelConfig = await new Promise(resolve => chrome.storage.local.get('modelConfig', result => resolve(result.modelConfig)));
 
@@ -981,7 +1321,8 @@ function initializeApp(user_id) {
                 };
                 fetchBody = JSON.stringify({
                     model: modelConfig.name,
-                    messages: [{ role: 'user', content: params }]
+                    messages: [{ role: 'user', content: params }],
+                    stream: false // 暂时禁用流式，直到后端支持
                 });
             } else {
                 // Default model settings (AnythingLLM)
@@ -997,11 +1338,19 @@ function initializeApp(user_id) {
                 });
             }
 
+            // 使用带超时的fetch
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
+
             const response = await fetch(fetchUrl, {
                 method: "POST",
                 headers: fetchHeaders,
-                body: fetchBody
+                body: fetchBody,
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+            clearInterval(loadingTimer);
 
             // Check HTTP response status
             if (!response.ok) {
@@ -1016,16 +1365,11 @@ function initializeApp(user_id) {
 
             if (isCustom) {
                 // 支持多种API响应格式
-                // OpenAI格式: data.choices[0].message.content
                 if (data.choices && data.choices[0] && data.choices[0].message) {
                     botReply = data.choices[0].message.content;
-                }
-                // Claude格式: data.content[0].text
-                else if (data.content && data.content[0] && data.content[0].text) {
+                } else if (data.content && data.content[0] && data.content[0].text) {
                     botReply = data.content[0].text;
-                }
-                // 通用格式: data.reply, data.response, data.answer, data.text
-                else if (data.reply) {
+                } else if (data.reply) {
                     botReply = data.reply;
                 } else if (data.response) {
                     botReply = data.response;
@@ -1047,31 +1391,63 @@ function initializeApp(user_id) {
                 throw new Error('API返回为空，请检查API配置');
             }
 
+            // 移除加载指示器
             loadingDiv.remove();
+
+            // 添加回复消息
             addMessageToChat("Assistant", botReply, "left");
 
-            // 保存AI回复到数据库
-            const response2 = await fetch('http://10.100.1.122:5000/api/save_chat', {
+            // 保存AI回复到数据库（不阻塞主流程）
+            fetch('http://10.100.1.122:5000/api/save_chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: user_id,
                     message: botReply,
                     chat_id: chat_id,
                     sender: 'ai'
                 })
+            }).then(response => {
+                if (!response.ok) {
+                    console.error('存储AI消息失败:', response.status);
+                }
+            }).catch(saveError => {
+                console.error('保存AI回复失败（不影响用户）:', saveError);
             });
 
-            if (!response2.ok) {
-                console.error('存储AI消息失败');
+        } catch (error) {
+            clearInterval(loadingTimer);
+            console.error('AI聊天失败:', error);
+
+            // 移除加载指示器
+            if (loadingDiv && loadingDiv.parentNode) {
+                loadingDiv.remove();
             }
 
-        } catch (error) {
-            console.error('发送消息失败:', error);
-            loadingDiv.remove();
-            addMessageToChat("System", `错误：${error.message}`, "left");
+            // 提供详细的错误信息
+            let errorDetails = '';
+            if (error.name === 'AbortError') {
+                errorDetails = '请求超时（60秒）。这可能是因为：\n' +
+                    '• 服务器负载过高\n' +
+                    '• 网络连接不稳定\n' +
+                    '• API响应时间过长';
+            } else if (error.message.includes('API请求失败')) {
+                errorDetails = error.message;
+            } else if (error.message.includes('Failed to fetch')) {
+                errorDetails = '无法连接到API服务器。请检查：\n' +
+                    '• 服务器地址是否正确\n' +
+                    '• 网络连接是否正常\n' +
+                    '• API密钥是否有效';
+            } else {
+                errorDetails = error.message || '未知错误';
+            }
+
+            addMessageToChat("System", `
+                <div style="background: #ffe6e6; border-left: 4px solid #ff3b30; padding: 12px; border-radius: 8px;">
+                    <p><strong>❌ AI回复失败</strong></p>
+                    <p style="margin: 8px 0; color: #666; white-space: pre-wrap;">${errorDetails}</p>
+                </div>
+            `, "left", true);
         }
     }
 
